@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+    bizfly-mcp-server:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: bizfly-mcp-server:latest
+        container_name: bizfly-mcp-server
+        restart: unless-stopped
+        environment:
+            # Required environment variables
+            - BIZFLY_USERNAME=${BIZFLY_USERNAME}
+            - BIZFLY_PASSWORD=${BIZFLY_PASSWORD}
+            # Optional environment variables with defaults
+            - BIZFLY_REGION=${BIZFLY_REGION:-HaNoi}
+            - BIZFLY_API_URL=${BIZFLY_API_URL:-https://manage.bizflycloud.vn}
+        stdin_open: true
+        tty: true
+        # For MCP server, we typically use stdio mode
+        # This allows the container to communicate via stdin/stdout
+        volumes:
+            # Optional: mount a config directory if needed in future
+            # - ./config:/app/config:ro
+            - /dev/stdin:/dev/stdin
+            - /dev/stdout:/dev/stdout
+            - /dev/stderr:/dev/stderr

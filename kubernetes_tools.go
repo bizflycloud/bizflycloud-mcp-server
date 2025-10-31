@@ -237,4 +237,169 @@ func RegisterKubernetesTools(s *server.MCPServer, client *gobizfly.Client) {
 		}
 		return mcp.NewToolResultText(result), nil
 	})
+
+	// Get cluster tool
+	getClusterTool := mcp.NewTool("bizflycloud_get_kubernetes_cluster",
+		mcp.WithDescription("Get details of a Bizfly Cloud Kubernetes cluster"),
+		mcp.WithString("cluster_id",
+			mcp.Required(),
+			mcp.Description("ID of the cluster to get details for"),
+		),
+	)
+	s.AddTool(getClusterTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		clusterID, ok := request.Params.Arguments["cluster_id"].(string)
+		if !ok {
+			return nil, errors.New("cluster_id must be a string")
+		}
+		cluster, err := client.KubernetesEngine.Get(ctx, clusterID)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to get cluster: %v", err)), nil
+		}
+
+		result := fmt.Sprintf("Cluster Details:\n\n")
+		result += fmt.Sprintf("Name: %s\n", cluster.Name)
+		result += fmt.Sprintf("ID: %s\n", cluster.UID)
+		result += fmt.Sprintf("Status: %s\n", cluster.ClusterStatus)
+		result += fmt.Sprintf("Provision Status: %s\n", cluster.ProvisionStatus)
+		result += fmt.Sprintf("Version: %s\n", cluster.Version.K8SVersion)
+		result += fmt.Sprintf("Worker Pools Count: %d\n", cluster.WorkerPoolsCount)
+		result += fmt.Sprintf("Auto Upgrade: %v\n", cluster.AutoUpgrade)
+		result += fmt.Sprintf("Created At: %s\n", cluster.CreatedAt)
+		result += "\nWorker Pools:\n"
+		for _, pool := range cluster.WorkerPools {
+			result += fmt.Sprintf("  - Name: %s\n", pool.Name)
+			result += fmt.Sprintf("    ID: %s\n", pool.UID)
+			result += fmt.Sprintf("    Flavor: %s\n", pool.Flavor)
+			result += fmt.Sprintf("    Profile Type: %s\n", pool.ProfileType)
+			result += fmt.Sprintf("    Volume Type: %s\n", pool.VolumeType)
+			result += fmt.Sprintf("    Volume Size: %d GB\n", pool.VolumeSize)
+			result += fmt.Sprintf("    Desired Size: %d nodes\n", pool.DesiredSize)
+			result += fmt.Sprintf("    Auto Scaling: %v\n", pool.EnableAutoScaling)
+			result += "\n"
+		}
+		return mcp.NewToolResultText(result), nil
+	})
+
+	// Update pool tool
+	updatePoolTool := mcp.NewTool("bizflycloud_update_kubernetes_pool",
+		mcp.WithDescription("Update a worker pool in a Bizfly Cloud Kubernetes cluster"),
+		mcp.WithString("cluster_id",
+			mcp.Required(),
+			mcp.Description("ID of the cluster"),
+		),
+		mcp.WithString("pool_id",
+			mcp.Required(),
+			mcp.Description("ID of the pool to update"),
+		),
+		mcp.WithNumber("desired_size",
+			mcp.Description("Desired number of nodes in the pool"),
+		),
+		mcp.WithBoolean("enable_autoscaling",
+			mcp.Description("Enable auto scaling for the pool"),
+		),
+		mcp.WithNumber("min_size",
+			mcp.Description("Minimum number of nodes for auto scaling"),
+		),
+		mcp.WithNumber("max_size",
+			mcp.Description("Maximum number of nodes for auto scaling"),
+		),
+	)
+	s.AddTool(updatePoolTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		clusterID, ok := request.Params.Arguments["cluster_id"].(string)
+		if !ok {
+			return nil, errors.New("cluster_id must be a string")
+		}
+		poolID, ok := request.Params.Arguments["pool_id"].(string)
+		if !ok {
+			return nil, errors.New("pool_id must be a string")
+		}
+
+		req := &gobizfly.UpdateWorkerPoolRequest{}
+		if desiredSize, ok := request.Params.Arguments["desired_size"].(float64); ok {
+			req.DesiredSize = int(desiredSize)
+		}
+		if enableAutoScaling, ok := request.Params.Arguments["enable_autoscaling"].(bool); ok {
+			req.EnableAutoScaling = enableAutoScaling
+		}
+		if minSize, ok := request.Params.Arguments["min_size"].(float64); ok {
+			req.MinSize = int(minSize)
+		}
+		if maxSize, ok := request.Params.Arguments["max_size"].(float64); ok {
+			req.MaxSize = int(maxSize)
+		}
+
+		err := client.KubernetesEngine.UpdateClusterWorkerPool(ctx, clusterID, poolID, req)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to update pool: %v", err)), nil
+		}
+		return mcp.NewToolResultText(fmt.Sprintf("Pool %s in cluster %s updated successfully", poolID, clusterID)), nil
+	})
+
+	// Resize pool tool (uses update with desired_size)
+	resizePoolTool := mcp.NewTool("bizflycloud_resize_kubernetes_pool",
+		mcp.WithDescription("Resize a worker pool in a Bizfly Cloud Kubernetes cluster"),
+		mcp.WithString("cluster_id",
+			mcp.Required(),
+			mcp.Description("ID of the cluster"),
+		),
+		mcp.WithString("pool_id",
+			mcp.Required(),
+			mcp.Description("ID of the pool to resize"),
+		),
+		mcp.WithNumber("desired_size",
+			mcp.Required(),
+			mcp.Description("New desired number of nodes in the pool"),
+		),
+	)
+	s.AddTool(resizePoolTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		clusterID, ok := request.Params.Arguments["cluster_id"].(string)
+		if !ok {
+			return nil, errors.New("cluster_id must be a string")
+		}
+		poolID, ok := request.Params.Arguments["pool_id"].(string)
+		if !ok {
+			return nil, errors.New("pool_id must be a string")
+		}
+		desiredSize, ok := request.Params.Arguments["desired_size"].(float64)
+		if !ok {
+			return nil, errors.New("desired_size must be a number")
+		}
+
+		req := &gobizfly.UpdateWorkerPoolRequest{
+			DesiredSize: int(desiredSize),
+		}
+		err := client.KubernetesEngine.UpdateClusterWorkerPool(ctx, clusterID, poolID, req)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to resize pool: %v", err)), nil
+		}
+		return mcp.NewToolResultText(fmt.Sprintf("Pool %s in cluster %s resized to %d nodes successfully", poolID, clusterID, int(desiredSize))), nil
+	})
+
+	// Delete pool tool
+	deletePoolTool := mcp.NewTool("bizflycloud_delete_kubernetes_pool",
+		mcp.WithDescription("Delete a worker pool from a Bizfly Cloud Kubernetes cluster"),
+		mcp.WithString("cluster_id",
+			mcp.Required(),
+			mcp.Description("ID of the cluster"),
+		),
+		mcp.WithString("pool_id",
+			mcp.Required(),
+			mcp.Description("ID of the pool to delete"),
+		),
+	)
+	s.AddTool(deletePoolTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		clusterID, ok := request.Params.Arguments["cluster_id"].(string)
+		if !ok {
+			return nil, errors.New("cluster_id must be a string")
+		}
+		poolID, ok := request.Params.Arguments["pool_id"].(string)
+		if !ok {
+			return nil, errors.New("pool_id must be a string")
+		}
+		err := client.KubernetesEngine.DeleteClusterWorkerPool(ctx, clusterID, poolID)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to delete pool: %v", err)), nil
+		}
+		return mcp.NewToolResultText(fmt.Sprintf("Pool %s deleted from cluster %s successfully", poolID, clusterID)), nil
+	})
 }

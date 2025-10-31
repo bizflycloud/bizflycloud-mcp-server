@@ -177,4 +177,117 @@ func RegisterDatabaseTools(s *server.MCPServer, client *gobizfly.Client) {
 		}
 		return mcp.NewToolResultText(fmt.Sprintf("Database %s deleted successfully", databaseID)), nil
 	})
+
+	// Get database tool
+	getDatabaseTool := mcp.NewTool("bizflycloud_get_database",
+		mcp.WithDescription("Get details of a Bizfly Cloud database instance"),
+		mcp.WithString("database_id",
+			mcp.Required(),
+			mcp.Description("ID of the database to get details for"),
+		),
+	)
+	s.AddTool(getDatabaseTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		databaseID, ok := request.Params.Arguments["database_id"].(string)
+		if !ok {
+			return nil, errors.New("database_id must be a string")
+		}
+		db, err := client.CloudDatabase.Instances().Get(ctx, databaseID)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to get database: %v", err)), nil
+		}
+
+		result := fmt.Sprintf("Database Details:\n\n")
+		result += fmt.Sprintf("Name: %s\n", db.Name)
+		result += fmt.Sprintf("ID: %s\n", db.ID)
+		result += fmt.Sprintf("Status: %s\n", db.Status)
+		result += fmt.Sprintf("DataStore Type: %s\n", db.Datastore.Type)
+		result += fmt.Sprintf("DataStore ID: %s\n", db.Datastore.ID)
+		result += fmt.Sprintf("Instance Type: %s\n", db.InstanceType)
+		result += fmt.Sprintf("Volume Size: %d GB\n", db.Volume.Size)
+		result += fmt.Sprintf("Volume Used: %.2f GB\n", db.Volume.Used)
+		result += fmt.Sprintf("Public Access: %v\n", db.PublicAccess)
+		result += fmt.Sprintf("Enable Failover: %v\n", db.EnableFailover)
+		result += fmt.Sprintf("Nodes Count: %d\n", len(db.Nodes))
+		if len(db.Nodes) > 0 {
+			result += fmt.Sprintf("Nodes:\n")
+			for _, node := range db.Nodes {
+				result += fmt.Sprintf("  - Node ID: %s\n", node.ID)
+			}
+		}
+		result += fmt.Sprintf("Created At: %s\n", db.CreatedAt)
+		return mcp.NewToolResultText(result), nil
+	})
+
+	// List backups tool
+	listBackupsTool := mcp.NewTool("bizflycloud_list_database_backups",
+		mcp.WithDescription("List backups for a Bizfly Cloud database instance"),
+		mcp.WithString("database_id",
+			mcp.Required(),
+			mcp.Description("ID of the database instance"),
+		),
+	)
+	s.AddTool(listBackupsTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		databaseID, ok := request.Params.Arguments["database_id"].(string)
+		if !ok {
+			return nil, errors.New("database_id must be a string")
+		}
+
+		resource := &gobizfly.CloudDatabaseBackupResource{
+			ResourceID:   databaseID,
+			ResourceType: "instance",
+		}
+		backups, err := client.CloudDatabase.Backups().List(ctx, resource, nil)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to list backups: %v", err)), nil
+		}
+
+		result := "Available backups:\n\n"
+		for _, backup := range backups {
+			result += fmt.Sprintf("Backup: %s\n", backup.Name)
+			result += fmt.Sprintf("  ID: %s\n", backup.ID)
+			result += fmt.Sprintf("  Status: %s\n", backup.Status)
+			result += fmt.Sprintf("  Type: %s\n", backup.Type)
+			result += fmt.Sprintf("  Size: %.2f GB\n", backup.Size)
+			result += fmt.Sprintf("  Created At: %s\n", backup.Created)
+			result += "\n"
+		}
+		return mcp.NewToolResultText(result), nil
+	})
+
+	// Create backup tool
+	createBackupTool := mcp.NewTool("bizflycloud_create_database_backup",
+		mcp.WithDescription("Create a backup for a Bizfly Cloud database instance"),
+		mcp.WithString("database_id",
+			mcp.Required(),
+			mcp.Description("ID of the database instance"),
+		),
+		mcp.WithString("backup_name",
+			mcp.Required(),
+			mcp.Description("Name of the backup"),
+		),
+	)
+	s.AddTool(createBackupTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		databaseID, ok := request.Params.Arguments["database_id"].(string)
+		if !ok {
+			return nil, errors.New("database_id must be a string")
+		}
+		backupName, ok := request.Params.Arguments["backup_name"].(string)
+		if !ok {
+			return nil, errors.New("backup_name must be a string")
+		}
+
+		backup, err := client.CloudDatabase.Backups().Create(ctx, "instance", databaseID, &gobizfly.CloudDatabaseBackupCreate{
+			Name: backupName,
+		})
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to create backup: %v", err)), nil
+		}
+
+		result := fmt.Sprintf("Backup created successfully:\n")
+		result += fmt.Sprintf("  Name: %s\n", backup.Name)
+		result += fmt.Sprintf("  ID: %s\n", backup.ID)
+		result += fmt.Sprintf("  Status: %s\n", backup.Status)
+		result += fmt.Sprintf("  Type: %s\n", backup.Type)
+		return mcp.NewToolResultText(result), nil
+	})
 } 

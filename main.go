@@ -70,6 +70,12 @@ func main() {
 	RegisterKubernetesTools(s, client)
 	RegisterDatabaseTools(s, client)
 	RegisterLoadBalancerTools(s, client)
+	RegisterDNSTools(s, client)
+	RegisterCDNTools(s, client)
+	RegisterKMSTools(s, client)
+	RegisterContainerRegistryTools(s, client)
+	RegisterAutoScalingTools(s, client)
+	RegisterAlertTools(s, client)
 
 	// Start the stdio server for Cursor/Claude Desktop integration
 	if err := server.ServeStdio(s); err != nil {

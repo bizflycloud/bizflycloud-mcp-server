@@ -104,11 +104,92 @@ func RegisterLoadBalancerTools(s *server.MCPServer, client *gobizfly.Client) {
 			return nil, errors.New("loadbalancer_id must be a string")
 		}
 		err := client.CloudLoadBalancer.Delete(ctx, &gobizfly.LoadBalancerDeleteRequest{
-			ID: loadbalancerID,
+			ID:      loadbalancerID,
+			Cascade: false,
 		})
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to delete load balancer: %v", err)), nil
 		}
 		return mcp.NewToolResultText(fmt.Sprintf("Load balancer %s deleted successfully", loadbalancerID)), nil
+	})
+
+	// Get load balancer tool
+	getLoadBalancerTool := mcp.NewTool("bizflycloud_get_loadbalancer",
+		mcp.WithDescription("Get details of a Bizfly Cloud load balancer"),
+		mcp.WithString("loadbalancer_id",
+			mcp.Required(),
+			mcp.Description("ID of the load balancer to get details for"),
+		),
+	)
+	s.AddTool(getLoadBalancerTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		loadbalancerID, ok := request.Params.Arguments["loadbalancer_id"].(string)
+		if !ok {
+			return nil, errors.New("loadbalancer_id must be a string")
+		}
+		lb, err := client.CloudLoadBalancer.Get(ctx, loadbalancerID)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to get load balancer: %v", err)), nil
+		}
+
+		result := fmt.Sprintf("Load Balancer Details:\n\n")
+		result += fmt.Sprintf("Name: %s\n", lb.Name)
+		result += fmt.Sprintf("ID: %s\n", lb.ID)
+		result += fmt.Sprintf("Description: %s\n", lb.Description)
+		result += fmt.Sprintf("Provider Status: %s\n", lb.ProvisioningStatus)
+		result += fmt.Sprintf("Operating Status: %s\n", lb.OperatingStatus)
+		result += fmt.Sprintf("Type: %s\n", lb.Type)
+		result += fmt.Sprintf("Network Type: %s\n", lb.NetworkType)
+		result += fmt.Sprintf("VIP Address: %s\n", lb.VipAddress)
+		result += fmt.Sprintf("Admin State: %v\n", lb.AdminStateUp)
+		result += fmt.Sprintf("Created At: %s\n", lb.CreatedAt)
+		result += fmt.Sprintf("Updated At: %s\n", lb.UpdatedAt)
+		return mcp.NewToolResultText(result), nil
+	})
+
+	// Update load balancer tool
+	updateLoadBalancerTool := mcp.NewTool("bizflycloud_update_loadbalancer",
+		mcp.WithDescription("Update a Bizfly Cloud load balancer"),
+		mcp.WithString("loadbalancer_id",
+			mcp.Required(),
+			mcp.Description("ID of the load balancer to update"),
+		),
+		mcp.WithString("name",
+			mcp.Description("New name for the load balancer"),
+		),
+		mcp.WithString("description",
+			mcp.Description("New description for the load balancer"),
+		),
+		mcp.WithBoolean("admin_state_up",
+			mcp.Description("Admin state up (true/false)"),
+		),
+	)
+	s.AddTool(updateLoadBalancerTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		loadbalancerID, ok := request.Params.Arguments["loadbalancer_id"].(string)
+		if !ok {
+			return nil, errors.New("loadbalancer_id must be a string")
+		}
+
+		req := &gobizfly.LoadBalancerUpdateRequest{}
+		if name, ok := request.Params.Arguments["name"].(string); ok && name != "" {
+			req.Name = &name
+		}
+		if desc, ok := request.Params.Arguments["description"].(string); ok && desc != "" {
+			req.Description = &desc
+		}
+		if adminStateUp, ok := request.Params.Arguments["admin_state_up"].(bool); ok {
+			req.AdminStateUp = &adminStateUp
+		}
+
+		lb, err := client.CloudLoadBalancer.Update(ctx, loadbalancerID, req)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to update load balancer: %v", err)), nil
+		}
+
+		result := fmt.Sprintf("Load balancer updated successfully:\n")
+		result += fmt.Sprintf("  Name: %s\n", lb.Name)
+		result += fmt.Sprintf("  ID: %s\n", lb.ID)
+		result += fmt.Sprintf("  Description: %s\n", lb.Description)
+		result += fmt.Sprintf("  Admin State: %v\n", lb.AdminStateUp)
+		return mcp.NewToolResultText(result), nil
 	})
 } 

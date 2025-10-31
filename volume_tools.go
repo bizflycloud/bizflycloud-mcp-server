@@ -13,7 +13,7 @@ import (
 // RegisterVolumeTools registers all volume-related tools with the MCP server
 func RegisterVolumeTools(s *server.MCPServer, client *gobizfly.Client) {
 	// List volumes tool
-	listVolumesTool := mcp.NewTool("list_volumes",
+	listVolumesTool := mcp.NewTool("bizflycloud_list_volumes",
 		mcp.WithDescription("List all Bizfly Cloud volumes"),
 	)
 	s.AddTool(listVolumesTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -38,7 +38,7 @@ func RegisterVolumeTools(s *server.MCPServer, client *gobizfly.Client) {
 	})
 
 	// Create volume tool
-	createVolumeTool := mcp.NewTool("create_volume",
+	createVolumeTool := mcp.NewTool("bizflycloud_create_volume",
 		mcp.WithDescription("Create a new Bizfly Cloud volume"),
 		mcp.WithString("name",
 			mcp.Required(),
@@ -85,7 +85,7 @@ func RegisterVolumeTools(s *server.MCPServer, client *gobizfly.Client) {
 	})
 
 	// Resize volume tool
-	resizeVolumeTool := mcp.NewTool("resize_volume",
+	resizeVolumeTool := mcp.NewTool("bizflycloud_resize_volume",
 		mcp.WithDescription("Resize a Bizfly Cloud volume"),
 		mcp.WithString("volume_id",
 			mcp.Required(),
@@ -114,7 +114,7 @@ func RegisterVolumeTools(s *server.MCPServer, client *gobizfly.Client) {
 	})
 
 	// Delete volume tool
-	deleteVolumeTool := mcp.NewTool("delete_volume",
+	deleteVolumeTool := mcp.NewTool("bizflycloud_delete_volume",
 		mcp.WithDescription("Delete a Bizfly Cloud volume"),
 		mcp.WithString("volume_id",
 			mcp.Required(),
@@ -134,13 +134,12 @@ func RegisterVolumeTools(s *server.MCPServer, client *gobizfly.Client) {
 	})
 
 	// List snapshots tool
-	listSnapshotsTool := mcp.NewTool("list_snapshots",
+	listSnapshotsTool := mcp.NewTool("bizflycloud_list_snapshots",
 		mcp.WithDescription("List all Bizfly Cloud volume snapshots"),
 	)
 	s.AddTool(listSnapshotsTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		opts := &gobizfly.ListSnasphotsOptions{}
 		snapshots, err := client.CloudServer.Snapshots().List(ctx, opts)
-		fmt.Println(snapshots)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to list snapshots: %v", err)), nil
 		}
@@ -158,7 +157,7 @@ func RegisterVolumeTools(s *server.MCPServer, client *gobizfly.Client) {
 	})
 
 	// Create snapshot tool
-	createSnapshotTool := mcp.NewTool("create_snapshot",
+	createSnapshotTool := mcp.NewTool("bizflycloud_create_snapshot",
 		mcp.WithDescription("Create a snapshot of a Bizfly Cloud volume"),
 		mcp.WithString("volume_id",
 			mcp.Required(),
@@ -197,7 +196,7 @@ func RegisterVolumeTools(s *server.MCPServer, client *gobizfly.Client) {
 	})
 
 	// Delete snapshot tool
-	deleteSnapshotTool := mcp.NewTool("delete_snapshot",
+	deleteSnapshotTool := mcp.NewTool("bizflycloud_delete_snapshot",
 		mcp.WithDescription("Delete a Bizfly Cloud volume snapshot"),
 		mcp.WithString("snapshot_id",
 			mcp.Required(),
@@ -214,5 +213,98 @@ func RegisterVolumeTools(s *server.MCPServer, client *gobizfly.Client) {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to delete snapshot: %v", err)), nil
 		}
 		return mcp.NewToolResultText(fmt.Sprintf("Snapshot %s deleted successfully", snapshotID)), nil
+	})
+
+	// Get volume tool
+	getVolumeTool := mcp.NewTool("bizflycloud_get_volume",
+		mcp.WithDescription("Get details of a Bizfly Cloud volume"),
+		mcp.WithString("volume_id",
+			mcp.Required(),
+			mcp.Description("ID of the volume to get details for"),
+		),
+	)
+	s.AddTool(getVolumeTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		volumeID, ok := request.Params.Arguments["volume_id"].(string)
+		if !ok {
+			return nil, errors.New("volume_id must be a string")
+		}
+		volume, err := client.CloudServer.Volumes().Get(ctx, volumeID)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to get volume: %v", err)), nil
+		}
+
+		result := fmt.Sprintf("Volume Details:\n\n")
+		result += fmt.Sprintf("Name: %s\n", volume.Name)
+		result += fmt.Sprintf("ID: %s\n", volume.ID)
+		result += fmt.Sprintf("Status: %s\n", volume.Status)
+		result += fmt.Sprintf("Size: %d GB\n", volume.Size)
+		result += fmt.Sprintf("Type: %s\n", volume.VolumeType)
+		result += fmt.Sprintf("Zone: %s\n", volume.AvailabilityZone)
+		result += fmt.Sprintf("Category: %s\n", volume.Category)
+		if len(volume.Attachments) > 0 {
+			result += fmt.Sprintf("Attachments:\n")
+			for _, attachment := range volume.Attachments {
+				result += fmt.Sprintf("  - Server ID: %s, Device: %s\n", attachment.ServerID, attachment.Device)
+			}
+		}
+		result += fmt.Sprintf("Created At: %s\n", volume.CreatedAt)
+		result += fmt.Sprintf("Updated At: %s\n", volume.UpdatedAt)
+		return mcp.NewToolResultText(result), nil
+	})
+
+	// Attach volume tool
+	attachVolumeTool := mcp.NewTool("bizflycloud_attach_volume",
+		mcp.WithDescription("Attach a Bizfly Cloud volume to a server"),
+		mcp.WithString("volume_id",
+			mcp.Required(),
+			mcp.Description("ID of the volume to attach"),
+		),
+		mcp.WithString("server_id",
+			mcp.Required(),
+			mcp.Description("ID of the server to attach the volume to"),
+		),
+	)
+	s.AddTool(attachVolumeTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		volumeID, ok := request.Params.Arguments["volume_id"].(string)
+		if !ok {
+			return nil, errors.New("volume_id must be a string")
+		}
+		serverID, ok := request.Params.Arguments["server_id"].(string)
+		if !ok {
+			return nil, errors.New("server_id must be a string")
+		}
+		_, err := client.CloudServer.Volumes().Attach(ctx, volumeID, serverID)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to attach volume: %v", err)), nil
+		}
+		return mcp.NewToolResultText(fmt.Sprintf("Volume %s attached to server %s successfully", volumeID, serverID)), nil
+	})
+
+	// Detach volume tool
+	detachVolumeTool := mcp.NewTool("bizflycloud_detach_volume",
+		mcp.WithDescription("Detach a Bizfly Cloud volume from a server"),
+		mcp.WithString("volume_id",
+			mcp.Required(),
+			mcp.Description("ID of the volume to detach"),
+		),
+		mcp.WithString("server_id",
+			mcp.Required(),
+			mcp.Description("ID of the server to detach the volume from"),
+		),
+	)
+	s.AddTool(detachVolumeTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		volumeID, ok := request.Params.Arguments["volume_id"].(string)
+		if !ok {
+			return nil, errors.New("volume_id must be a string")
+		}
+		serverID, ok := request.Params.Arguments["server_id"].(string)
+		if !ok {
+			return nil, errors.New("server_id must be a string")
+		}
+		_, err := client.CloudServer.Volumes().Detach(ctx, volumeID, serverID)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to detach volume: %v", err)), nil
+		}
+		return mcp.NewToolResultText(fmt.Sprintf("Volume %s detached from server %s successfully", volumeID, serverID)), nil
 	})
 } 

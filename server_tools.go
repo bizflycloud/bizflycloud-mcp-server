@@ -13,7 +13,7 @@ import (
 // RegisterServerTools registers all server-related tools with the MCP server
 func RegisterServerTools(s *server.MCPServer, client *gobizfly.Client) {
 	// List servers tool
-	listServersTool := mcp.NewTool("list_servers",
+	listServersTool := mcp.NewTool("bizflycloud_list_servers",
 		mcp.WithDescription("List all Bizfly Cloud servers"),
 	)
 	s.AddTool(listServersTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -43,7 +43,7 @@ func RegisterServerTools(s *server.MCPServer, client *gobizfly.Client) {
 	})
 
 	// Reboot server tool
-	rebootServerTool := mcp.NewTool("reboot_server",
+	rebootServerTool := mcp.NewTool("bizflycloud_reboot_server",
 		mcp.WithDescription("Reboot a Bizfly Cloud server"),
 		mcp.WithString("server_id",
 			mcp.Required(),
@@ -63,7 +63,7 @@ func RegisterServerTools(s *server.MCPServer, client *gobizfly.Client) {
 	})
 
 	// Delete server tool
-	deleteServerTool := mcp.NewTool("delete_server",
+	deleteServerTool := mcp.NewTool("bizflycloud_delete_server",
 		mcp.WithDescription("Delete a Bizfly Cloud server"),
 		mcp.WithString("server_id",
 			mcp.Required(),
@@ -83,7 +83,7 @@ func RegisterServerTools(s *server.MCPServer, client *gobizfly.Client) {
 	})
 
 	// Start server tool
-	startServerTool := mcp.NewTool("start_server",
+	startServerTool := mcp.NewTool("bizflycloud_start_server",
 		mcp.WithDescription("Start a Bizfly Cloud server"),
 		mcp.WithString("server_id",
 			mcp.Required(),
@@ -103,7 +103,7 @@ func RegisterServerTools(s *server.MCPServer, client *gobizfly.Client) {
 	})
 
 	// Resize server tool
-	resizeServerTool := mcp.NewTool("resize_server",
+	resizeServerTool := mcp.NewTool("bizflycloud_resize_server",
 		mcp.WithDescription("Resize a Bizfly Cloud server"),
 		mcp.WithString("server_id",
 			mcp.Required(),
@@ -149,7 +149,7 @@ func RegisterServerTools(s *server.MCPServer, client *gobizfly.Client) {
 	})
 
 	// List flavors tool
-	listFlavorsTool := mcp.NewTool("list_flavors",
+	listFlavorsTool := mcp.NewTool("bizflycloud_list_flavors",
 		mcp.WithDescription("List all available Bizfly Cloud server flavors"),
 	)
 	s.AddTool(listFlavorsTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -169,5 +169,86 @@ func RegisterServerTools(s *server.MCPServer, client *gobizfly.Client) {
 			result += "\n"
 		}
 		return mcp.NewToolResultText(result), nil
+	})
+
+	// Get server tool
+	getServerTool := mcp.NewTool("bizflycloud_get_server",
+		mcp.WithDescription("Get details of a Bizfly Cloud server"),
+		mcp.WithString("server_id",
+			mcp.Required(),
+			mcp.Description("ID of the server to get details for"),
+		),
+	)
+	s.AddTool(getServerTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		serverID, ok := request.Params.Arguments["server_id"].(string)
+		if !ok {
+			return nil, errors.New("server_id must be a string")
+		}
+		server, err := client.CloudServer.Get(ctx, serverID)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to get server: %v", err)), nil
+		}
+
+		result := fmt.Sprintf("Server Details:\n\n")
+		result += fmt.Sprintf("Name: %s\n", server.Name)
+		result += fmt.Sprintf("ID: %s\n", server.ID)
+		result += fmt.Sprintf("Status: %s\n", server.Status)
+		result += fmt.Sprintf("Flavor: %s\n", server.FlavorName)
+		result += fmt.Sprintf("Zone: %s\n", server.AvailabilityZone)
+		if len(server.IPAddresses.WanV4Addresses) > 0 {
+			result += fmt.Sprintf("WAN IPs:\n")
+			for _, ip := range server.IPAddresses.WanV4Addresses {
+				result += fmt.Sprintf("  - %s\n", string(ip.Address))
+			}
+		}
+		if len(server.IPAddresses.LanAddresses) > 0 {
+			result += fmt.Sprintf("LAN IPs:\n")
+			for _, ip := range server.IPAddresses.LanAddresses {
+				result += fmt.Sprintf("  - %s\n", string(ip.Address))
+			}
+		}
+		result += fmt.Sprintf("Created At: %s\n", server.CreatedAt)
+		result += fmt.Sprintf("Updated At: %s\n", server.UpdatedAt)
+		return mcp.NewToolResultText(result), nil
+	})
+
+	// Stop server tool
+	stopServerTool := mcp.NewTool("bizflycloud_stop_server",
+		mcp.WithDescription("Stop a Bizfly Cloud server"),
+		mcp.WithString("server_id",
+			mcp.Required(),
+			mcp.Description("ID of the server to stop"),
+		),
+	)
+	s.AddTool(stopServerTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		serverID, ok := request.Params.Arguments["server_id"].(string)
+		if !ok {
+			return nil, errors.New("server_id must be a string")
+		}
+		_, err := client.CloudServer.Stop(ctx, serverID)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to stop server: %v", err)), nil
+		}
+		return mcp.NewToolResultText(fmt.Sprintf("Server %s stopped successfully", serverID)), nil
+	})
+
+	// Hard reboot server tool
+	hardRebootServerTool := mcp.NewTool("bizflycloud_hard_reboot_server",
+		mcp.WithDescription("Hard reboot a Bizfly Cloud server (force reboot)"),
+		mcp.WithString("server_id",
+			mcp.Required(),
+			mcp.Description("ID of the server to hard reboot"),
+		),
+	)
+	s.AddTool(hardRebootServerTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		serverID, ok := request.Params.Arguments["server_id"].(string)
+		if !ok {
+			return nil, errors.New("server_id must be a string")
+		}
+		_, err := client.CloudServer.HardReboot(ctx, serverID)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to hard reboot server: %v", err)), nil
+		}
+		return mcp.NewToolResultText(fmt.Sprintf("Server %s hard rebooted successfully", serverID)), nil
 	})
 } 
