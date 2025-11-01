@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/bizflycloud/gobizfly"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -250,5 +251,224 @@ func RegisterServerTools(s *server.MCPServer, client *gobizfly.Client) {
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to hard reboot server: %v", err)), nil
 		}
 		return mcp.NewToolResultText(fmt.Sprintf("Server %s hard rebooted successfully", serverID)), nil
+	})
+
+	// Create server tool - Create a server with customizable OS, flavor, disk size and volume type
+	createServerTool := mcp.NewTool("bizflycloud_create_server",
+		mcp.WithDescription("Create a new Bizfly Cloud server"),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("Name of the server"),
+		),
+		mcp.WithString("os_type",
+			mcp.Description("OS type (ubuntu, centos, etc.) - optional, defaults to ubuntu"),
+		),
+		mcp.WithString("image_id",
+			mcp.Description("ID of the image (optional, will auto-select based on os_type if not provided)"),
+		),
+		mcp.WithString("flavor_name",
+			mcp.Description("Name of the flavor (optional, defaults to nix.1c_1g for smallest config)"),
+		),
+		mcp.WithNumber("root_disk_size",
+			mcp.Description("Root disk size in GB (optional, defaults to 20 GB)"),
+		),
+		mcp.WithString("volume_type",
+			mcp.Description("Volume type for root disk (optional, defaults to SSD - PREMIUM-SSD1)"),
+		),
+		mcp.WithString("availability_zone",
+			mcp.Description("Availability zone (optional, defaults to HN1)"),
+		),
+		mcp.WithString("use_password",
+			mcp.Description("Set to 'true' to use password authentication (optional, defaults to SSH key)"),
+		),
+	)
+	s.AddTool(createServerTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		name, ok := request.Params.Arguments["name"].(string)
+		if !ok {
+			return nil, errors.New("name must be a string")
+		}
+
+		// Get OS type (default to ubuntu)
+		osType := "ubuntu"
+		if ost, ok := request.Params.Arguments["os_type"].(string); ok && ost != "" {
+			osType = strings.ToLower(ost)
+		}
+
+		flavorName := "nix.1c_1g" // Default to smallest flavor
+		if fn, ok := request.Params.Arguments["flavor_name"].(string); ok && fn != "" {
+			flavorName = fn
+		}
+
+		// Get root disk size (default to 20GB)
+		rootDiskSize := 20
+		if rds, ok := request.Params.Arguments["root_disk_size"].(float64); ok && rds > 0 {
+			rootDiskSize = int(rds)
+		}
+
+		availabilityZone := "HN1"
+		if zone, ok := request.Params.Arguments["availability_zone"].(string); ok && zone != "" {
+			availabilityZone = zone
+		}
+
+		// Verify flavor exists
+		flavors, err := client.CloudServer.Flavors().List(ctx)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to get flavors: %v", err)), nil
+		}
+
+		flavorFound := false
+		for _, flavor := range flavors {
+			if flavor.Name == flavorName {
+				flavorFound = true
+				break
+			}
+		}
+		if !flavorFound {
+			return mcp.NewToolResultError(fmt.Sprintf("Flavor '%s' not found. Use bizflycloud_list_flavors to see available flavors", flavorName)), nil
+		}
+
+		// Get image ID
+		var imageID string
+		if imgID, ok := request.Params.Arguments["image_id"].(string); ok && imgID != "" {
+			imageID = imgID
+		} else {
+			// Try to find image from custom images first
+			customImages, err := client.CloudServer.CustomImages().List(ctx)
+			if err == nil && len(customImages) > 0 {
+				// Look for OS type in custom images
+				for _, img := range customImages {
+					if strings.Contains(strings.ToLower(img.Name), osType) {
+						imageID = img.ID
+						break
+					}
+				}
+			}
+			
+			// If not found in custom images, try OS images
+			if imageID == "" {
+				images, err := client.CloudServer.OSImages().List(ctx)
+				if err != nil {
+					return mcp.NewToolResultError(fmt.Sprintf("Failed to get images: %v. Please provide image_id manually", err)), nil
+				}
+
+				// Find image matching OS type
+				for _, image := range images {
+					if strings.ToLower(image.OSDistribution) == osType {
+						// Get first version's ID
+						if len(image.Version) > 0 {
+							imageID = image.Version[0].ID
+							break
+						}
+					}
+				}
+			}
+			
+			if imageID == "" {
+				return mcp.NewToolResultError(fmt.Sprintf("%s image not found automatically. Please provide image_id parameter", strings.Title(osType))), nil
+			}
+		}
+
+		// Determine password authentication
+		usePassword := false
+		if pwd, ok := request.Params.Arguments["use_password"].(string); ok && pwd == "true" {
+			usePassword = true
+		}
+
+		// Create server request
+		// Determine server type based on flavor category
+		serverType := "premium" // Default to premium
+		for _, flavor := range flavors {
+			if flavor.Name == flavorName {
+				// Map flavor category to server type
+				switch flavor.Category {
+				case "basic":
+					serverType = "basic"
+				case "enterprise":
+					serverType = "enterprise"
+				case "dedicated":
+					serverType = "dedicated"
+				case "premium":
+					serverType = "premium"
+				case "vps":
+					serverType = "premium"
+				default:
+					serverType = "premium"
+				}
+				break
+			}
+		}
+		
+		// Ensure serverType is not empty
+		if serverType == "" {
+			serverType = "premium"
+		}
+
+		// Get volume type for root disk
+		volumeType := ""
+		if vt, ok := request.Params.Arguments["volume_type"].(string); ok && vt != "" {
+			volumeType = vt
+		} else {
+			// Try to find SSD volume type from existing volumes
+			volumes, err := client.CloudServer.Volumes().List(ctx, &gobizfly.VolumeListOptions{})
+			if err == nil {
+				// Look for SSD volume types in existing volumes (highest priority)
+				for _, vol := range volumes {
+					if strings.Contains(strings.ToUpper(vol.VolumeType), "SSD") {
+						volumeType = vol.VolumeType
+						break
+					}
+				}
+				// If no SSD found, try NVME (also fast storage, second priority)
+				if volumeType == "" {
+					for _, vol := range volumes {
+						if strings.Contains(strings.ToUpper(vol.VolumeType), "NVME") {
+							volumeType = vol.VolumeType
+							break
+						}
+					}
+				}
+			}
+			
+			// If no SSD/NVME found, use default SSD types in order of preference
+			if volumeType == "" {
+				possibleSSDTypes := []string{"PREMIUM-SSD1", "PREMIUM-NVME1", "SSD", "BASIC-SSD1"}
+				volumeType = possibleSSDTypes[0] // Default to PREMIUM-SSD1 (SSD)
+			}
+		}
+		
+		rootDisk := &gobizfly.ServerDisk{
+			Size:       rootDiskSize,
+			VolumeType: &volumeType,
+		}
+
+		// OS Type should be "image" when using an image ID
+		createReq := &gobizfly.ServerCreateRequest{
+			Name:             name,
+			FlavorName:       flavorName,
+			Type:             serverType,
+			RootDisk:         rootDisk,
+			AvailabilityZone: availabilityZone,
+			OS: &gobizfly.ServerOS{
+				ID:   imageID,
+				Type: "image", // OS type: "image", "snapshot", "volume", "volume_source", "prebuild_app"
+			},
+			Password: usePassword,
+		}
+
+		// Create the server
+		createResp, err := client.CloudServer.Create(ctx, createReq)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to create server: %v", err)), nil
+		}
+
+		result := fmt.Sprintf("Server creation initiated successfully:\n")
+		result += fmt.Sprintf("  Name: %s\n", name)
+		result += fmt.Sprintf("  Flavor: %s\n", flavorName)
+		result += fmt.Sprintf("  OS: %s\n", strings.Title(osType))
+		result += fmt.Sprintf("  Root Disk: %d GB (%s)\n", rootDiskSize, volumeType)
+		result += fmt.Sprintf("  Zone: %s\n", availabilityZone)
+		result += fmt.Sprintf("  Task IDs: %v\n", createResp.Task)
+		result += fmt.Sprintf("\nNote: Server is being created. Use bizflycloud_list_servers to check status.\n")
+		return mcp.NewToolResultText(result), nil
 	})
 } 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/bizflycloud/gobizfly"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -12,6 +13,54 @@ import (
 
 // RegisterVolumeTools registers all volume-related tools with the MCP server
 func RegisterVolumeTools(s *server.MCPServer, client *gobizfly.Client) {
+	// List volume types tool
+	listVolumeTypesTool := mcp.NewTool("bizflycloud_list_volume_types",
+		mcp.WithDescription("List all available Bizfly Cloud volume types"),
+	)
+	s.AddTool(listVolumeTypesTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		volumes, err := client.CloudServer.Volumes().List(ctx, &gobizfly.VolumeListOptions{})
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Failed to list volumes: %v", err)), nil
+		}
+
+		// Collect unique volume types from existing volumes
+		volumeTypesMap := make(map[string]bool)
+		for _, volume := range volumes {
+			if volume.VolumeType != "" {
+				volumeTypesMap[volume.VolumeType] = true
+			}
+		}
+
+		// Common volume types (in case no volumes exist yet)
+		commonTypes := []string{"PREMIUM-SSD1", "PREMIUM-HDD1", "SSD", "HDD", "BASIC-HDD1", "BASIC-SSD1"}
+		for _, vType := range commonTypes {
+			volumeTypesMap[vType] = true
+		}
+
+		result := "Available volume types:\n\n"
+		// Sort and display (prefer SSD types first)
+		ssdTypes := []string{}
+		otherTypes := []string{}
+		for vType := range volumeTypesMap {
+			if strings.Contains(strings.ToUpper(vType), "SSD") {
+				ssdTypes = append(ssdTypes, vType)
+			} else {
+				otherTypes = append(otherTypes, vType)
+			}
+		}
+
+		// Display SSD types first
+		for _, vType := range ssdTypes {
+			result += fmt.Sprintf("  - %s (SSD)\n", vType)
+		}
+		for _, vType := range otherTypes {
+			result += fmt.Sprintf("  - %s\n", vType)
+		}
+
+		result += fmt.Sprintf("\nDefault: PREMIUM-SSD1 (SSD)\n")
+		return mcp.NewToolResultText(result), nil
+	})
+
 	// List volumes tool
 	listVolumesTool := mcp.NewTool("bizflycloud_list_volumes",
 		mcp.WithDescription("List all Bizfly Cloud volumes"),
