@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"strings"
 
 	"github.com/bizflycloud/gobizfly"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -17,21 +19,36 @@ func RegisterLoadBalancerTools(s *server.MCPServer, client *gobizfly.Client) {
 		mcp.WithDescription("List all Bizfly Cloud load balancers"),
 	)
 	s.AddTool(listLoadBalancersTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		log.Printf("[DEBUG] Load Balancer List tool called")
 		loadbalancers, err := client.CloudLoadBalancer.List(ctx, &gobizfly.ListOptions{})
 		if err != nil {
+			log.Printf("[ERROR] Failed to list load balancers: %v", err)
+			// Check if error is 404 or service not available
+			errStr := strings.ToLower(err.Error())
+			if strings.Contains(errStr, "404") ||
+				strings.Contains(errStr, "not found") ||
+				strings.Contains(errStr, "resource not found") ||
+				strings.Contains(errStr, "<svg") ||
+				strings.Contains(errStr, "<html") {
+				return mcp.NewToolResultText("Available load balancers:\n\n(No load balancers found or Load Balancer service is not enabled)"), nil
+			}
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to list load balancers: %v", err)), nil
 		}
 
 		result := "Available load balancers:\n\n"
-		for _, lb := range loadbalancers {
-			result += fmt.Sprintf("Load Balancer: %s\n", lb.Name)
-			result += fmt.Sprintf("  ID: %s\n", lb.ID)
-			result += fmt.Sprintf("  Provider Status: %s\n", lb.ProvisioningStatus)
-			result += fmt.Sprintf("  Operating Status: %s\n", lb.OperatingStatus)
-			result += fmt.Sprintf("  Type: %s\n", lb.Type)
-			result += fmt.Sprintf("  Network Type: %s\n", lb.NetworkType)
-			result += fmt.Sprintf("  Created At: %s\n", lb.CreatedAt)
-			result += "\n"
+		if len(loadbalancers) == 0 {
+			result += "(No load balancers found)\n"
+		} else {
+			for _, lb := range loadbalancers {
+				result += fmt.Sprintf("Load Balancer: %s\n", lb.Name)
+				result += fmt.Sprintf("  ID: %s\n", lb.ID)
+				result += fmt.Sprintf("  Provider Status: %s\n", lb.ProvisioningStatus)
+				result += fmt.Sprintf("  Operating Status: %s\n", lb.OperatingStatus)
+				result += fmt.Sprintf("  Type: %s\n", lb.Type)
+				result += fmt.Sprintf("  Network Type: %s\n", lb.NetworkType)
+				result += fmt.Sprintf("  Created At: %s\n", lb.CreatedAt)
+				result += "\n"
+			}
 		}
 		return mcp.NewToolResultText(result), nil
 	})

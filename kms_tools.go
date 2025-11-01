@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"strings"
 
 	"github.com/bizflycloud/gobizfly"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -17,16 +19,42 @@ func RegisterKMSTools(s *server.MCPServer, client *gobizfly.Client) {
 		mcp.WithDescription("List all Bizfly Cloud KMS certificates"),
 	)
 	s.AddTool(listCertificatesTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[PANIC] Recovered from panic in listCertificatesTool: %v", r)
+			}
+		}()
+
+		log.Printf("[DEBUG] KMS Certificates List tool called")
+		
+		if client == nil || client.KMS == nil || client.KMS.Certificates() == nil {
+			log.Printf("[ERROR] KMS service is not available")
+			return mcp.NewToolResultText("Available KMS certificates:\n\n(KMS service is not available)"), nil
+		}
+
 		certificates, err := client.KMS.Certificates().List(ctx)
 		if err != nil {
+			log.Printf("[ERROR] Failed to list KMS certificates: %v", err)
+			errStr := strings.ToLower(err.Error())
+			if strings.Contains(errStr, "404") ||
+				strings.Contains(errStr, "not found") ||
+				strings.Contains(errStr, "resource not found") ||
+				strings.Contains(errStr, "<svg") ||
+				strings.Contains(errStr, "<html") {
+				return mcp.NewToolResultText("Available KMS certificates:\n\n(No certificates found or KMS service is not enabled)"), nil
+			}
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to list KMS certificates: %v", err)), nil
 		}
 
 		result := "Available KMS certificates:\n\n"
-		for _, cert := range certificates {
-			result += fmt.Sprintf("Certificate: %s\n", cert.Name)
-			result += fmt.Sprintf("  Container ID: %s\n", cert.ContainerID)
-			result += "\n"
+		if len(certificates) == 0 {
+			result += "(No certificates found)\n"
+		} else {
+			for _, cert := range certificates {
+				result += fmt.Sprintf("Certificate: %s\n", cert.Name)
+				result += fmt.Sprintf("  Container ID: %s\n", cert.ContainerID)
+				result += "\n"
+			}
 		}
 		return mcp.NewToolResultText(result), nil
 	})

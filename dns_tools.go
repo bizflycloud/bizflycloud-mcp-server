@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/bizflycloud/gobizfly"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -19,20 +20,33 @@ func RegisterDNSTools(s *server.MCPServer, client *gobizfly.Client) {
 	s.AddTool(listZonesTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		zones, err := client.DNS.ListZones(ctx, &gobizfly.ListOptions{})
 		if err != nil {
+			// Check if error is 404 or service not available
+			errStr := strings.ToLower(err.Error())
+			if strings.Contains(errStr, "404") || 
+			   strings.Contains(errStr, "not found") || 
+			   strings.Contains(errStr, "resource not found") ||
+			   strings.Contains(errStr, "<svg") ||
+			   strings.Contains(errStr, "<html") {
+				return mcp.NewToolResultText("Available DNS zones:\n\n(No DNS zones found or DNS service is not enabled)"), nil
+			}
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to list DNS zones: %v", err)), nil
 		}
 
 		result := "Available DNS zones:\n\n"
-		for _, zone := range zones.Zones {
-			result += fmt.Sprintf("Zone: %s\n", zone.Name)
-			result += fmt.Sprintf("  ID: %s\n", zone.ID)
-			result += fmt.Sprintf("  Active: %v\n", zone.Active)
-			result += fmt.Sprintf("  TTL: %d\n", zone.TTL)
-			if len(zone.NameServer) > 0 {
-				result += fmt.Sprintf("  Name Servers: %v\n", zone.NameServer)
+		if zones == nil || zones.Zones == nil || len(zones.Zones) == 0 {
+			result += "(No DNS zones found)\n"
+		} else {
+			for _, zone := range zones.Zones {
+				result += fmt.Sprintf("Zone: %s\n", zone.Name)
+				result += fmt.Sprintf("  ID: %s\n", zone.ID)
+				result += fmt.Sprintf("  Active: %v\n", zone.Active)
+				result += fmt.Sprintf("  TTL: %d\n", zone.TTL)
+				if len(zone.NameServer) > 0 {
+					result += fmt.Sprintf("  Name Servers: %v\n", zone.NameServer)
+				}
+				result += fmt.Sprintf("  Created At: %s\n", zone.CreatedAt)
+				result += "\n"
 			}
-			result += fmt.Sprintf("  Created At: %s\n", zone.CreatedAt)
-			result += "\n"
 		}
 		return mcp.NewToolResultText(result), nil
 	})

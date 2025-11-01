@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"strings"
 
 	"github.com/bizflycloud/gobizfly"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -20,25 +22,50 @@ func RegisterAutoScalingTools(s *server.MCPServer, client *gobizfly.Client) {
 		),
 	)
 	s.AddTool(listGroupsTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[PANIC] Recovered from panic in listGroupsTool: %v", r)
+			}
+		}()
+
+		log.Printf("[DEBUG] AutoScaling Groups List tool called")
 		all, _ := request.Params.Arguments["all"].(bool)
+
+		if client == nil || client.AutoScaling == nil || client.AutoScaling.AutoScalingGroups() == nil {
+			log.Printf("[ERROR] AutoScaling service is not available")
+			return mcp.NewToolResultText("Available AutoScaling groups:\n\n(AutoScaling service is not available)"), nil
+		}
 
 		groups, err := client.AutoScaling.AutoScalingGroups().List(ctx, all)
 		if err != nil {
+			log.Printf("[ERROR] Failed to list auto scaling groups: %v", err)
+			errStr := strings.ToLower(err.Error())
+			if strings.Contains(errStr, "404") ||
+				strings.Contains(errStr, "not found") ||
+				strings.Contains(errStr, "resource not found") ||
+				strings.Contains(errStr, "<svg") ||
+				strings.Contains(errStr, "<html") {
+				return mcp.NewToolResultText("Available AutoScaling groups:\n\n(No groups found or AutoScaling service is not enabled)"), nil
+			}
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to list auto scaling groups: %v", err)), nil
 		}
 
 		result := "Available AutoScaling groups:\n\n"
-		for _, group := range groups {
-			result += fmt.Sprintf("Group: %s\n", group.Name)
-			result += fmt.Sprintf("  ID: %s\n", group.ID)
-			result += fmt.Sprintf("  Status: %s\n", group.Status)
-			result += fmt.Sprintf("  Min Size: %d\n", group.MinSize)
-			result += fmt.Sprintf("  Max Size: %d\n", group.MaxSize)
-			result += fmt.Sprintf("  Desired Capacity: %d\n", group.DesiredCapacity)
-			result += fmt.Sprintf("  Current Nodes: %d\n", len(group.NodeIDs))
-			result += fmt.Sprintf("  Profile ID: %s\n", group.ProfileID)
-			result += fmt.Sprintf("  Created At: %s\n", group.Created)
-			result += "\n"
+		if len(groups) == 0 {
+			result += "(No groups found)\n"
+		} else {
+			for _, group := range groups {
+				result += fmt.Sprintf("Group: %s\n", group.Name)
+				result += fmt.Sprintf("  ID: %s\n", group.ID)
+				result += fmt.Sprintf("  Status: %s\n", group.Status)
+				result += fmt.Sprintf("  Min Size: %d\n", group.MinSize)
+				result += fmt.Sprintf("  Max Size: %d\n", group.MaxSize)
+				result += fmt.Sprintf("  Desired Capacity: %d\n", group.DesiredCapacity)
+				result += fmt.Sprintf("  Current Nodes: %d\n", len(group.NodeIDs))
+				result += fmt.Sprintf("  Profile ID: %s\n", group.ProfileID)
+				result += fmt.Sprintf("  Created At: %s\n", group.Created)
+				result += "\n"
+			}
 		}
 		return mcp.NewToolResultText(result), nil
 	})

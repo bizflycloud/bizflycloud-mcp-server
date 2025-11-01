@@ -1,0 +1,2962 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>bizflycloud-mcp-server: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/bizflycloud-mcp-server/alert_tools.go (9.4%)</option>
+				
+				<option value="file1">github.com/bizflycloud-mcp-server/autoscaling_tools.go (10.4%)</option>
+				
+				<option value="file2">github.com/bizflycloud-mcp-server/cdn_tools.go (13.0%)</option>
+				
+				<option value="file3">github.com/bizflycloud-mcp-server/container_registry_tools.go (13.1%)</option>
+				
+				<option value="file4">github.com/bizflycloud-mcp-server/database_tools.go (9.9%)</option>
+				
+				<option value="file5">github.com/bizflycloud-mcp-server/dns_tools.go (12.7%)</option>
+				
+				<option value="file6">github.com/bizflycloud-mcp-server/kms_tools.go (13.3%)</option>
+				
+				<option value="file7">github.com/bizflycloud-mcp-server/kubernetes_tools.go (8.2%)</option>
+				
+				<option value="file8">github.com/bizflycloud-mcp-server/loadbalancer_tools.go (11.1%)</option>
+				
+				<option value="file9">github.com/bizflycloud-mcp-server/main.go (0.0%)</option>
+				
+				<option value="file10">github.com/bizflycloud-mcp-server/server_tools.go (14.2%)</option>
+				
+				<option value="file11">github.com/bizflycloud-mcp-server/test_helpers.go (69.2%)</option>
+				
+				<option value="file12">github.com/bizflycloud-mcp-server/volume_tools.go (13.6%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "context"
+        "errors"
+        "fmt"
+
+        "github.com/bizflycloud/gobizfly"
+        "github.com/mark3labs/mcp-go/mcp"
+        "github.com/mark3labs/mcp-go/server"
+)
+
+// RegisterAlertTools registers all Alert (CloudWatcher)-related tools with the MCP server
+func RegisterAlertTools(s *server.MCPServer, client *gobizfly.Client) <span class="cov8" title="1">{
+        // List alarms tool
+        listAlarmsTool := mcp.NewTool("bizflycloud_list_alarms",
+                mcp.WithDescription("List all Bizfly Cloud alarms"),
+        )
+        s.AddTool(listAlarmsTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                alarms, err := client.CloudWatcher.Alarms().List(ctx, nil)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to list alarms: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := "Available alarms:\n\n"
+                for _, alarm := range alarms </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Alarm: %s\n", alarm.Name)
+                        result += fmt.Sprintf("  ID: %s\n", alarm.ID)
+                        result += fmt.Sprintf("  Resource Type: %s\n", alarm.ResourceType)
+                        result += fmt.Sprintf("  Enable: %v\n", alarm.Enable)
+                        result += fmt.Sprintf("  Alert Interval: %d\n", alarm.AlertInterval)
+                        result += fmt.Sprintf("  Created At: %s\n", alarm.Created)
+                        result += "\n"
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Get alarm tool
+        <span class="cov8" title="1">getAlarmTool := mcp.NewTool("bizflycloud_get_alarm",
+                mcp.WithDescription("Get details of a Bizfly Cloud alarm"),
+                mcp.WithString("alarm_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the alarm"),
+                ),
+        )
+        s.AddTool(getAlarmTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                alarmID, ok := request.Params.Arguments["alarm_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("alarm_id must be a string")
+                }</span>
+                <span class="cov0" title="0">alarm, err := client.CloudWatcher.Alarms().Get(ctx, alarmID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to get alarm: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("Alarm Details:\n\n")
+                result += fmt.Sprintf("Name: %s\n", alarm.Name)
+                result += fmt.Sprintf("ID: %s\n", alarm.ID)
+                result += fmt.Sprintf("Resource Type: %s\n", alarm.ResourceType)
+                result += fmt.Sprintf("Enable: %v\n", alarm.Enable)
+                result += fmt.Sprintf("Alert Interval: %d\n", alarm.AlertInterval)
+                result += fmt.Sprintf("Created At: %s\n", alarm.Created)
+                if len(alarm.Receivers) &gt; 0 </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Receivers:\n")
+                        for _, receiver := range alarm.Receivers </span><span class="cov0" title="0">{
+                                result += fmt.Sprintf("  - %s (ID: %s)\n", receiver.Name, receiver.ReceiverID)
+                        }</span>
+                }
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // List receivers tool
+        <span class="cov8" title="1">listReceiversTool := mcp.NewTool("bizflycloud_list_receivers",
+                mcp.WithDescription("List all Bizfly Cloud alert receivers"),
+        )
+        s.AddTool(listReceiversTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                receivers, err := client.CloudWatcher.Receivers().List(ctx, nil)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to list receivers: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := "Available receivers:\n\n"
+                for _, receiver := range receivers </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Receiver: %s\n", receiver.Name)
+                        result += fmt.Sprintf("  ID: %s\n", receiver.ReceiverID)
+                        if receiver.EmailAddress != "" </span><span class="cov0" title="0">{
+                                result += fmt.Sprintf("  Type: Email\n")
+                                result += fmt.Sprintf("  Email: %s\n", receiver.EmailAddress)
+                        }</span> else<span class="cov0" title="0"> if receiver.WebhookURL != "" </span><span class="cov0" title="0">{
+                                result += fmt.Sprintf("  Type: Webhook\n")
+                        }</span> else<span class="cov0" title="0"> if receiver.SMSNumber != "" </span><span class="cov0" title="0">{
+                                result += fmt.Sprintf("  Type: SMS\n")
+                        }</span> else<span class="cov0" title="0"> if receiver.TelegramChatID != "" </span><span class="cov0" title="0">{
+                                result += fmt.Sprintf("  Type: Telegram\n")
+                        }</span>
+                        <span class="cov0" title="0">result += fmt.Sprintf("  Created At: %s\n", receiver.Created)
+                        result += "\n"</span>
+                }
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Get receiver tool
+        <span class="cov8" title="1">getReceiverTool := mcp.NewTool("bizflycloud_get_receiver",
+                mcp.WithDescription("Get details of a Bizfly Cloud alert receiver"),
+                mcp.WithString("receiver_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the receiver"),
+                ),
+        )
+        s.AddTool(getReceiverTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                receiverID, ok := request.Params.Arguments["receiver_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("receiver_id must be a string")
+                }</span>
+                <span class="cov0" title="0">receiver, err := client.CloudWatcher.Receivers().Get(ctx, receiverID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to get receiver: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("Receiver Details:\n\n")
+                result += fmt.Sprintf("Name: %s\n", receiver.Name)
+                result += fmt.Sprintf("ID: %s\n", receiver.ReceiverID)
+                if receiver.EmailAddress != "" </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Type: Email\n")
+                        result += fmt.Sprintf("Email: %s\n", receiver.EmailAddress)
+                        result += fmt.Sprintf("Verified: %v\n", receiver.VerifiedEmailDddress)
+                }</span> else<span class="cov0" title="0"> if receiver.WebhookURL != "" </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Type: Webhook\n")
+                        result += fmt.Sprintf("Webhook URL: %s\n", receiver.WebhookURL)
+                        result += fmt.Sprintf("Verified: %v\n", receiver.VerifiedWebhookURL)
+                }</span> else<span class="cov0" title="0"> if receiver.SMSNumber != "" </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Type: SMS\n")
+                        result += fmt.Sprintf("SMS Number: %s\n", receiver.SMSNumber)
+                        result += fmt.Sprintf("Verified: %v\n", receiver.VerifiedSMSNumber)
+                }</span> else<span class="cov0" title="0"> if receiver.TelegramChatID != "" </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Type: Telegram\n")
+                        result += fmt.Sprintf("Telegram Chat ID: %s\n", receiver.TelegramChatID)
+                        result += fmt.Sprintf("Verified: %v\n", receiver.VerifiedTelegramChatID)
+                }</span>
+                <span class="cov0" title="0">result += fmt.Sprintf("Created At: %s\n", receiver.Created)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+}
+
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package main
+
+import (
+        "context"
+        "errors"
+        "fmt"
+
+        "github.com/bizflycloud/gobizfly"
+        "github.com/mark3labs/mcp-go/mcp"
+        "github.com/mark3labs/mcp-go/server"
+)
+
+// RegisterAutoScalingTools registers all AutoScaling-related tools with the MCP server
+func RegisterAutoScalingTools(s *server.MCPServer, client *gobizfly.Client) <span class="cov8" title="1">{
+        // List auto scaling groups tool
+        listGroupsTool := mcp.NewTool("bizflycloud_list_autoscaling_groups",
+                mcp.WithDescription("List all Bizfly Cloud AutoScaling groups"),
+                mcp.WithBoolean("all",
+                        mcp.Description("List all groups including deleted ones (default: false)"),
+                ),
+        )
+        s.AddTool(listGroupsTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                all, _ := request.Params.Arguments["all"].(bool)
+
+                groups, err := client.AutoScaling.AutoScalingGroups().List(ctx, all)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to list auto scaling groups: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := "Available AutoScaling groups:\n\n"
+                for _, group := range groups </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Group: %s\n", group.Name)
+                        result += fmt.Sprintf("  ID: %s\n", group.ID)
+                        result += fmt.Sprintf("  Status: %s\n", group.Status)
+                        result += fmt.Sprintf("  Min Size: %d\n", group.MinSize)
+                        result += fmt.Sprintf("  Max Size: %d\n", group.MaxSize)
+                        result += fmt.Sprintf("  Desired Capacity: %d\n", group.DesiredCapacity)
+                        result += fmt.Sprintf("  Current Nodes: %d\n", len(group.NodeIDs))
+                        result += fmt.Sprintf("  Profile ID: %s\n", group.ProfileID)
+                        result += fmt.Sprintf("  Created At: %s\n", group.Created)
+                        result += "\n"
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Get auto scaling group tool
+        <span class="cov8" title="1">getGroupTool := mcp.NewTool("bizflycloud_get_autoscaling_group",
+                mcp.WithDescription("Get details of a Bizfly Cloud AutoScaling group"),
+                mcp.WithString("group_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the auto scaling group"),
+                ),
+        )
+        s.AddTool(getGroupTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                groupID, ok := request.Params.Arguments["group_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("group_id must be a string")
+                }</span>
+                <span class="cov0" title="0">group, err := client.AutoScaling.AutoScalingGroups().Get(ctx, groupID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to get auto scaling group: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("AutoScaling Group Details:\n\n")
+                result += fmt.Sprintf("Name: %s\n", group.Name)
+                result += fmt.Sprintf("ID: %s\n", group.ID)
+                result += fmt.Sprintf("Status: %s\n", group.Status)
+                result += fmt.Sprintf("Min Size: %d\n", group.MinSize)
+                result += fmt.Sprintf("Max Size: %d\n", group.MaxSize)
+                result += fmt.Sprintf("Desired Capacity: %d\n", group.DesiredCapacity)
+                result += fmt.Sprintf("Current Nodes: %d\n", len(group.NodeIDs))
+                result += fmt.Sprintf("Profile ID: %s\n", group.ProfileID)
+                result += fmt.Sprintf("Profile Name: %s\n", group.ProfileName)
+                result += fmt.Sprintf("Created At: %s\n", group.Created)
+                result += fmt.Sprintf("Updated At: %s\n", group.Updated)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Create auto scaling group tool
+        <span class="cov8" title="1">createGroupTool := mcp.NewTool("bizflycloud_create_autoscaling_group",
+                mcp.WithDescription("Create a new Bizfly Cloud AutoScaling group"),
+                mcp.WithString("name",
+                        mcp.Required(),
+                        mcp.Description("Name of the auto scaling group"),
+                ),
+                mcp.WithString("profile_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the launch configuration profile"),
+                ),
+                mcp.WithNumber("min_size",
+                        mcp.Required(),
+                        mcp.Description("Minimum number of nodes"),
+                ),
+                mcp.WithNumber("max_size",
+                        mcp.Required(),
+                        mcp.Description("Maximum number of nodes"),
+                ),
+                mcp.WithNumber("desired_capacity",
+                        mcp.Required(),
+                        mcp.Description("Desired number of nodes"),
+                ),
+        )
+        s.AddTool(createGroupTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                name, ok := request.Params.Arguments["name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("name must be a string")
+                }</span>
+                <span class="cov0" title="0">profileID, ok := request.Params.Arguments["profile_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("profile_id must be a string")
+                }</span>
+                <span class="cov0" title="0">minSize, ok := request.Params.Arguments["min_size"].(float64)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("min_size must be a number")
+                }</span>
+                <span class="cov0" title="0">maxSize, ok := request.Params.Arguments["max_size"].(float64)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("max_size must be a number")
+                }</span>
+                <span class="cov0" title="0">desiredCapacity, ok := request.Params.Arguments["desired_capacity"].(float64)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("desired_capacity must be a number")
+                }</span>
+
+                <span class="cov0" title="0">group, err := client.AutoScaling.AutoScalingGroups().Create(ctx, &amp;gobizfly.AutoScalingGroupCreateRequest{
+                        Name:           name,
+                        ProfileID:      profileID,
+                        MinSize:        int(minSize),
+                        MaxSize:        int(maxSize),
+                        DesiredCapacity: int(desiredCapacity),
+                })
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to create auto scaling group: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("AutoScaling group created successfully:\n")
+                result += fmt.Sprintf("  Name: %s\n", group.Name)
+                result += fmt.Sprintf("  ID: %s\n", group.ID)
+                result += fmt.Sprintf("  Status: %s\n", group.Status)
+                result += fmt.Sprintf("  Min Size: %d\n", group.MinSize)
+                result += fmt.Sprintf("  Max Size: %d\n", group.MaxSize)
+                result += fmt.Sprintf("  Desired Capacity: %d\n", group.DesiredCapacity)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Delete auto scaling group tool
+        <span class="cov8" title="1">deleteGroupTool := mcp.NewTool("bizflycloud_delete_autoscaling_group",
+                mcp.WithDescription("Delete a Bizfly Cloud AutoScaling group"),
+                mcp.WithString("group_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the auto scaling group to delete"),
+                ),
+        )
+        s.AddTool(deleteGroupTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                groupID, ok := request.Params.Arguments["group_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("group_id must be a string")
+                }</span>
+                <span class="cov0" title="0">err := client.AutoScaling.AutoScalingGroups().Delete(ctx, groupID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to delete auto scaling group: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("AutoScaling group %s deleted successfully", groupID)), nil</span>
+        })
+}
+
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package main
+
+import (
+        "context"
+        "errors"
+        "fmt"
+        "strings"
+
+        "github.com/bizflycloud/gobizfly"
+        "github.com/mark3labs/mcp-go/mcp"
+        "github.com/mark3labs/mcp-go/server"
+)
+
+// RegisterCDNTools registers all CDN-related tools with the MCP server
+func RegisterCDNTools(s *server.MCPServer, client *gobizfly.Client) <span class="cov8" title="1">{
+        // List CDN domains tool
+        listDomainsTool := mcp.NewTool("bizflycloud_list_cdn_domains",
+                mcp.WithDescription("List all Bizfly Cloud CDN domains"),
+        )
+        s.AddTool(listDomainsTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                domains, err := client.CDN.List(ctx, &amp;gobizfly.ListOptions{})
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to list CDN domains: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := "Available CDN domains:\n\n"
+                for _, domain := range domains.Domains </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Domain: %s\n", domain.Domain)
+                        result += fmt.Sprintf("  ID: %s\n", domain.DomainID)
+                        result += fmt.Sprintf("  Slug: %s\n", domain.Slug)
+                        result += fmt.Sprintf("  CDN Domain: %s\n", domain.DomainCDN)
+                        result += "\n"
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Create CDN domain tool
+        <span class="cov8" title="1">createDomainTool := mcp.NewTool("bizflycloud_create_cdn_domain",
+                mcp.WithDescription("Create a new Bizfly Cloud CDN domain"),
+                mcp.WithString("domain",
+                        mcp.Required(),
+                        mcp.Description("Domain name for CDN (e.g., example.com)"),
+                ),
+                mcp.WithString("upstream_host",
+                        mcp.Required(),
+                        mcp.Description("Upstream host for the origin"),
+                ),
+                mcp.WithString("upstream_addrs",
+                        mcp.Required(),
+                        mcp.Description("Upstream addresses (comma-separated IPs or domains)"),
+                ),
+                mcp.WithString("upstream_proto",
+                        mcp.Description("Upstream protocol (http or https, default: http)"),
+                ),
+        )
+        s.AddTool(createDomainTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                domain, ok := request.Params.Arguments["domain"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("domain must be a string")
+                }</span>
+                <span class="cov0" title="0">upstreamHost, ok := request.Params.Arguments["upstream_host"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("upstream_host must be a string")
+                }</span>
+                <span class="cov0" title="0">upstreamAddrs, ok := request.Params.Arguments["upstream_addrs"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("upstream_addrs must be a string")
+                }</span>
+                <span class="cov0" title="0">upstreamProto, _ := request.Params.Arguments["upstream_proto"].(string)
+                if upstreamProto == "" </span><span class="cov0" title="0">{
+                        upstreamProto = "http"
+                }</span>
+
+                <span class="cov0" title="0">resp, err := client.CDN.Create(ctx, &amp;gobizfly.CreateDomainPayload{
+                        Domain: domain,
+                        Origin: &amp;gobizfly.Origin{
+                                Name:          domain,
+                                UpstreamHost:  upstreamHost,
+                                UpstreamAddrs: upstreamAddrs,
+                                UpstreamProto: upstreamProto,
+                        },
+                })
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to create CDN domain: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("CDN domain created successfully:\n")
+                result += fmt.Sprintf("  Domain: %s\n", resp.Domain.Domain)
+                result += fmt.Sprintf("  ID: %s\n", resp.Domain.DomainID)
+                result += fmt.Sprintf("  CDN Domain: %s\n", resp.Domain.DomainCDN)
+                result += fmt.Sprintf("  Message: %s\n", resp.Message)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Get CDN domain tool
+        <span class="cov8" title="1">getDomainTool := mcp.NewTool("bizflycloud_get_cdn_domain",
+                mcp.WithDescription("Get details of a Bizfly Cloud CDN domain"),
+                mcp.WithString("domain_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the CDN domain"),
+                ),
+        )
+        s.AddTool(getDomainTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                domainID, ok := request.Params.Arguments["domain_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("domain_id must be a string")
+                }</span>
+                <span class="cov0" title="0">domain, err := client.CDN.Get(ctx, domainID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to get CDN domain: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("CDN Domain Details:\n\n")
+                result += fmt.Sprintf("Domain: %s\n", domain.Domain)
+                result += fmt.Sprintf("ID: %s\n", domain.DomainID)
+                result += fmt.Sprintf("Slug: %s\n", domain.Slug)
+                result += fmt.Sprintf("CDN Domain: %s\n", domain.DomainCDN)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Update CDN domain tool
+        <span class="cov8" title="1">updateDomainTool := mcp.NewTool("bizflycloud_update_cdn_domain",
+                mcp.WithDescription("Update a Bizfly Cloud CDN domain"),
+                mcp.WithString("domain_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the CDN domain to update"),
+                ),
+                mcp.WithString("upstream_addrs",
+                        mcp.Description("New upstream addresses (comma-separated)"),
+                ),
+                mcp.WithString("upstream_proto",
+                        mcp.Description("Upstream protocol (http or https)"),
+                ),
+        )
+        s.AddTool(updateDomainTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                domainID, ok := request.Params.Arguments["domain_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("domain_id must be a string")
+                }</span>
+
+                <span class="cov0" title="0">payload := &amp;gobizfly.UpdateDomainPayload{}
+                if upstreamAddrs, ok := request.Params.Arguments["upstream_addrs"].(string); ok &amp;&amp; upstreamAddrs != "" </span><span class="cov0" title="0">{
+                        if upstreamProto, ok := request.Params.Arguments["upstream_proto"].(string); ok &amp;&amp; upstreamProto != "" </span><span class="cov0" title="0">{
+                                payload.Origin = &amp;gobizfly.Origin{
+                                        UpstreamAddrs: upstreamAddrs,
+                                        UpstreamProto: upstreamProto,
+                                }
+                        }</span>
+                }
+
+                <span class="cov0" title="0">resp, err := client.CDN.Update(ctx, domainID, payload)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to update CDN domain: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("CDN domain updated successfully:\n")
+                result += fmt.Sprintf("  Domain: %s\n", resp.Domain.Domain)
+                result += fmt.Sprintf("  Message: %s\n", resp.Message)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Delete CDN domain tool
+        <span class="cov8" title="1">deleteDomainTool := mcp.NewTool("bizflycloud_delete_cdn_domain",
+                mcp.WithDescription("Delete a Bizfly Cloud CDN domain"),
+                mcp.WithString("domain_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the CDN domain to delete"),
+                ),
+        )
+        s.AddTool(deleteDomainTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                domainID, ok := request.Params.Arguments["domain_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("domain_id must be a string")
+                }</span>
+                <span class="cov0" title="0">err := client.CDN.Delete(ctx, domainID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to delete CDN domain: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("CDN domain %s deleted successfully", domainID)), nil</span>
+        })
+
+        // Delete CDN cache tool
+        <span class="cov8" title="1">deleteCacheTool := mcp.NewTool("bizflycloud_delete_cdn_cache",
+                mcp.WithDescription("Delete cache for a Bizfly Cloud CDN domain"),
+                mcp.WithString("domain_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the CDN domain"),
+                ),
+                mcp.WithString("files",
+                        mcp.Description("Comma-separated list of file paths to purge (leave empty to purge all)"),
+                ),
+        )
+        s.AddTool(deleteCacheTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                domainID, ok := request.Params.Arguments["domain_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("domain_id must be a string")
+                }</span>
+
+                <span class="cov0" title="0">filesStr, _ := request.Params.Arguments["files"].(string)
+                var files *gobizfly.Files
+                if filesStr != "" </span><span class="cov0" title="0">{
+                        fileList := strings.Split(filesStr, ",")
+                        for i, f := range fileList </span><span class="cov0" title="0">{
+                                fileList[i] = strings.TrimSpace(f)
+                        }</span>
+                        <span class="cov0" title="0">files = &amp;gobizfly.Files{
+                                Files: fileList,
+                        }</span>
+                } else<span class="cov0" title="0"> {
+                        files = &amp;gobizfly.Files{
+                                Files: []string{},
+                        }
+                }</span>
+
+                <span class="cov0" title="0">err := client.CDN.DeleteCache(ctx, domainID, files)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to delete CDN cache: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("CDN cache for domain %s deleted successfully", domainID)), nil</span>
+        })
+}
+
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package main
+
+import (
+        "context"
+        "errors"
+        "fmt"
+
+        "github.com/bizflycloud/gobizfly"
+        "github.com/mark3labs/mcp-go/mcp"
+        "github.com/mark3labs/mcp-go/server"
+)
+
+// RegisterContainerRegistryTools registers all Container Registry-related tools with the MCP server
+func RegisterContainerRegistryTools(s *server.MCPServer, client *gobizfly.Client) <span class="cov8" title="1">{
+        // List repositories tool
+        listRepositoriesTool := mcp.NewTool("bizflycloud_list_container_registries",
+                mcp.WithDescription("List all Bizfly Cloud Container Registry repositories"),
+        )
+        s.AddTool(listRepositoriesTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                repositories, err := client.ContainerRegistry.List(ctx, &amp;gobizfly.ListOptions{})
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to list repositories: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := "Available repositories:\n\n"
+                for _, repo := range repositories </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Repository: %s\n", repo.Name)
+                        result += fmt.Sprintf("  Public: %v\n", repo.Public)
+                        result += fmt.Sprintf("  Pulls: %d\n", repo.Pulls)
+                        result += fmt.Sprintf("  Last Push: %s\n", repo.LastPush)
+                        result += fmt.Sprintf("  Created At: %s\n", repo.CreatedAt)
+                        result += "\n"
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Create repository tool
+        <span class="cov8" title="1">createRepositoryTool := mcp.NewTool("bizflycloud_create_container_registry",
+                mcp.WithDescription("Create a new Bizfly Cloud Container Registry repository"),
+                mcp.WithString("name",
+                        mcp.Required(),
+                        mcp.Description("Name of the repository"),
+                ),
+                mcp.WithBoolean("public",
+                        mcp.Description("Whether the repository is public (default: false)"),
+                ),
+        )
+        s.AddTool(createRepositoryTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                name, ok := request.Params.Arguments["name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("name must be a string")
+                }</span>
+                <span class="cov0" title="0">public, _ := request.Params.Arguments["public"].(bool)
+
+                err := client.ContainerRegistry.Create(ctx, &amp;gobizfly.CreateRepositoryPayload{
+                        Name:   name,
+                        Public: public,
+                })
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to create repository: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("Repository created successfully:\n")
+                result += fmt.Sprintf("  Name: %s\n", name)
+                result += fmt.Sprintf("  Public: %v\n", public)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Delete repository tool
+        <span class="cov8" title="1">deleteRepositoryTool := mcp.NewTool("bizflycloud_delete_container_registry",
+                mcp.WithDescription("Delete a Bizfly Cloud Container Registry repository"),
+                mcp.WithString("repository_name",
+                        mcp.Required(),
+                        mcp.Description("Name of the repository to delete"),
+                ),
+        )
+        s.AddTool(deleteRepositoryTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                repositoryName, ok := request.Params.Arguments["repository_name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("repository_name must be a string")
+                }</span>
+                <span class="cov0" title="0">err := client.ContainerRegistry.Delete(ctx, repositoryName)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to delete repository: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Repository %s deleted successfully", repositoryName)), nil</span>
+        })
+
+        // Get repository tags tool
+        <span class="cov8" title="1">getTagsTool := mcp.NewTool("bizflycloud_list_container_registry_tags",
+                mcp.WithDescription("List tags for a Bizfly Cloud Container Registry repository"),
+                mcp.WithString("repository_name",
+                        mcp.Required(),
+                        mcp.Description("Name of the repository"),
+                ),
+        )
+        s.AddTool(getTagsTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                repositoryName, ok := request.Params.Arguments["repository_name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("repository_name must be a string")
+                }</span>
+                <span class="cov0" title="0">tags, err := client.ContainerRegistry.GetTags(ctx, repositoryName)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to get tags: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("Repository: %s\n\n", tags.Repository.Name)
+                result += fmt.Sprintf("Tags:\n\n")
+                for _, tag := range tags.Tags </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Tag: %s\n", tag.Name)
+                        result += fmt.Sprintf("  Author: %s\n", tag.Author)
+                        result += fmt.Sprintf("  Created At: %s\n", tag.CreatedAt)
+                        result += fmt.Sprintf("  Last Updated: %s\n", tag.LastUpdated)
+                        result += fmt.Sprintf("  Vulnerabilities: %d\n", tag.Vulnerabilities)
+                        result += fmt.Sprintf("  Fixes: %d\n", tag.Fixes)
+                        result += "\n"
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Get tag details tool
+        <span class="cov8" title="1">getTagTool := mcp.NewTool("bizflycloud_get_container_registry_tag",
+                mcp.WithDescription("Get details of a Container Registry tag"),
+                mcp.WithString("repository_name",
+                        mcp.Required(),
+                        mcp.Description("Name of the repository"),
+                ),
+                mcp.WithString("tag_name",
+                        mcp.Required(),
+                        mcp.Description("Name of the tag"),
+                ),
+                mcp.WithString("vulnerabilities",
+                        mcp.Description("Include vulnerabilities (yes/no, default: no)"),
+                ),
+        )
+        s.AddTool(getTagTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                repositoryName, ok := request.Params.Arguments["repository_name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("repository_name must be a string")
+                }</span>
+                <span class="cov0" title="0">tagName, ok := request.Params.Arguments["tag_name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("tag_name must be a string")
+                }</span>
+                <span class="cov0" title="0">vulns, _ := request.Params.Arguments["vulnerabilities"].(string)
+                if vulns != "yes" </span><span class="cov0" title="0">{
+                        vulns = "no"
+                }</span>
+
+                <span class="cov0" title="0">image, err := client.ContainerRegistry.GetTag(ctx, repositoryName, tagName, vulns)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to get tag: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("Tag Details:\n\n")
+                result += fmt.Sprintf("Repository: %s\n", image.Repository.Name)
+                result += fmt.Sprintf("Tag: %s\n", image.Tag.Name)
+                result += fmt.Sprintf("Author: %s\n", image.Tag.Author)
+                result += fmt.Sprintf("Created At: %s\n", image.Tag.CreatedAt)
+                result += fmt.Sprintf("Last Updated: %s\n", image.Tag.LastUpdated)
+                result += fmt.Sprintf("Scan Status: %s\n", image.Tag.ScanStatus)
+                result += fmt.Sprintf("Vulnerabilities: %d\n", image.Tag.Vulnerabilities)
+                result += fmt.Sprintf("Fixes: %d\n", image.Tag.Fixes)
+                if len(image.Vulnerabilities) &gt; 0 </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("\nVulnerabilities:\n")
+                        for _, vuln := range image.Vulnerabilities </span><span class="cov0" title="0">{
+                                result += fmt.Sprintf("  - %s (%s): %s\n", vuln.Name, vuln.Severity, vuln.Description)
+                        }</span>
+                }
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Delete tag tool
+        <span class="cov8" title="1">deleteTagTool := mcp.NewTool("bizflycloud_delete_container_registry_tag",
+                mcp.WithDescription("Delete a tag from a Bizfly Cloud Container Registry repository"),
+                mcp.WithString("repository_name",
+                        mcp.Required(),
+                        mcp.Description("Name of the repository"),
+                ),
+                mcp.WithString("tag_name",
+                        mcp.Required(),
+                        mcp.Description("Name of the tag to delete"),
+                ),
+        )
+        s.AddTool(deleteTagTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                repositoryName, ok := request.Params.Arguments["repository_name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("repository_name must be a string")
+                }</span>
+                <span class="cov0" title="0">tagName, ok := request.Params.Arguments["tag_name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("tag_name must be a string")
+                }</span>
+                <span class="cov0" title="0">err := client.ContainerRegistry.DeleteTag(ctx, tagName, repositoryName)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to delete tag: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Tag %s deleted from repository %s successfully", tagName, repositoryName)), nil</span>
+        })
+
+        // Update repository tool
+        <span class="cov8" title="1">updateRepositoryTool := mcp.NewTool("bizflycloud_update_container_registry",
+                mcp.WithDescription("Update a Bizfly Cloud Container Registry repository"),
+                mcp.WithString("repository_name",
+                        mcp.Required(),
+                        mcp.Description("Name of the repository to update"),
+                ),
+                mcp.WithBoolean("public",
+                        mcp.Required(),
+                        mcp.Description("Whether the repository should be public"),
+                ),
+        )
+        s.AddTool(updateRepositoryTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                repositoryName, ok := request.Params.Arguments["repository_name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("repository_name must be a string")
+                }</span>
+                <span class="cov0" title="0">public, ok := request.Params.Arguments["public"].(bool)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("public must be a boolean")
+                }</span>
+
+                <span class="cov0" title="0">err := client.ContainerRegistry.EditRepo(ctx, repositoryName, &amp;gobizfly.EditRepositoryPayload{
+                        Public: public,
+                })
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to update repository: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Repository %s updated successfully", repositoryName)), nil</span>
+        })
+}
+
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package main
+
+import (
+        "context"
+        "errors"
+        "fmt"
+
+        "github.com/bizflycloud/gobizfly"
+        "github.com/mark3labs/mcp-go/mcp"
+        "github.com/mark3labs/mcp-go/server"
+)
+
+// RegisterDatabaseTools registers all database-related tools with the MCP server
+func RegisterDatabaseTools(s *server.MCPServer, client *gobizfly.Client) <span class="cov8" title="1">{
+        // List databases tool
+        listDatabasesTool := mcp.NewTool("bizflycloud_list_databases",
+                mcp.WithDescription("List all Bizfly Cloud databases"),
+        )
+        s.AddTool(listDatabasesTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                // Get available engines first
+                engines, err := client.CloudDatabase.Engines().List(ctx)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to list database engines: %v", err)), nil
+                }</span>
+
+                // Get databases
+                <span class="cov0" title="0">databases, err := client.CloudDatabase.Instances().List(ctx, nil)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to list databases: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := "Available databases:\n\n"
+                for _, db := range databases </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Database: %s\n", db.Name)
+                        result += fmt.Sprintf("  ID: %s\n", db.ID)
+                        result += fmt.Sprintf("  DataStore Type: %s\n", db.Datastore.Type)
+                        result += fmt.Sprintf("  DataStore ID: %s\n", db.Datastore.ID)
+                        
+                        // Find matching engine
+                        for _, engine := range engines </span><span class="cov0" title="0">{
+                                if engine.ID == db.Datastore.ID </span><span class="cov0" title="0">{
+                                        result += fmt.Sprintf("  Engine Name: %s\n", engine.Name)
+                                        if len(engine.Versions) &gt; 0 </span><span class="cov0" title="0">{
+                                                result += fmt.Sprintf("  Available Versions: %v\n", engine.Versions)
+                                        }</span>
+                                        <span class="cov0" title="0">break</span>
+                                }
+                        }
+                        
+                        <span class="cov0" title="0">result += fmt.Sprintf("  Status: %s\n", db.Status)
+                        result += fmt.Sprintf("  Created At: %s\n", db.CreatedAt)
+                        result += "\n"</span>
+                }
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // List datastores tool
+        <span class="cov8" title="1">listDatastoresTool := mcp.NewTool("bizflycloud_list_datastores",
+                mcp.WithDescription("List all available Bizfly Cloud database engines and versions"),
+        )
+        s.AddTool(listDatastoresTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                engines, err := client.CloudDatabase.Engines().List(ctx)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to list database engines: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := "Available database engines and versions:\n\n"
+                for _, engine := range engines </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Database Engine: %s\n", engine.Name)
+                        result += fmt.Sprintf("  ID: %s\n", engine.ID)
+                        if len(engine.Versions) &gt; 0 </span><span class="cov0" title="0">{
+                                result += fmt.Sprintf("  Available Versions:\n")
+                                for _, version := range engine.Versions </span><span class="cov0" title="0">{
+                                        result += fmt.Sprintf("    - %s\n", version)
+                                }</span>
+                        }
+                        <span class="cov0" title="0">result += "\n"</span>
+                }
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Create database tool
+        <span class="cov8" title="1">createDatabaseTool := mcp.NewTool("bizflycloud_create_database",
+                mcp.WithDescription("Create a new Bizfly Cloud database"),
+                mcp.WithString("name",
+                        mcp.Required(),
+                        mcp.Description("Name of the database"),
+                ),
+                mcp.WithString("type",
+                        mcp.Required(),
+                        mcp.Description("Type of database (mysql, postgresql, mongodb)"),
+                ),
+                mcp.WithString("version",
+                        mcp.Required(),
+                        mcp.Description("Version of the database"),
+                ),
+                mcp.WithString("flavor",
+                        mcp.Required(),
+                        mcp.Description("Flavor name for the database instance"),
+                ),
+                mcp.WithNumber("volume_size",
+                        mcp.Required(),
+                        mcp.Description("Size of the volume in GB"),
+                ),
+                mcp.WithString("availability_zone",
+                        mcp.Required(),
+                        mcp.Description("Availability zone for the database"),
+                ),
+        )
+        s.AddTool(createDatabaseTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                name, ok := request.Params.Arguments["name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("name must be a string")
+                }</span>
+                <span class="cov0" title="0">dbType, ok := request.Params.Arguments["type"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("type must be a string")
+                }</span>
+                <span class="cov0" title="0">version, ok := request.Params.Arguments["version"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("version must be a string")
+                }</span>
+                <span class="cov0" title="0">flavor, ok := request.Params.Arguments["flavor"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("flavor must be a string")
+                }</span>
+                <span class="cov0" title="0">volumeSize, ok := request.Params.Arguments["volume_size"].(float64)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("volume_size must be a number")
+                }</span>
+                <span class="cov0" title="0">availabilityZone, ok := request.Params.Arguments["availability_zone"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("availability_zone must be a string")
+                }</span>
+
+                <span class="cov0" title="0">database, err := client.CloudDatabase.Instances().Create(ctx, &amp;gobizfly.CloudDatabaseInstanceCreate{
+                        Name: name,
+                        Datastore: gobizfly.CloudDatabaseDatastore{
+                                Type: dbType,
+                                ID:   version,
+                        },
+                        FlavorName:       flavor,
+                        VolumeSize:       int(volumeSize),
+                        AvailabilityZone: availabilityZone,
+                        Networks:         []gobizfly.CloudDatabaseNetworks{{}}, // Default network
+                })
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to create database: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("Database created successfully:\n")
+                result += fmt.Sprintf("  Name: %s\n", database.Name)
+                result += fmt.Sprintf("  ID: %s\n", database.ID)
+                result += fmt.Sprintf("  DataStore Type: %s\n", database.Datastore.Type)
+                result += fmt.Sprintf("  DataStore ID: %s\n", database.Datastore.ID)
+                result += fmt.Sprintf("  Status: %s\n", database.Status)
+                result += fmt.Sprintf("  Created At: %s\n", database.CreatedAt)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Delete database tool
+        <span class="cov8" title="1">deleteDatabaseTool := mcp.NewTool("bizflycloud_delete_database",
+                mcp.WithDescription("Delete a Bizfly Cloud database"),
+                mcp.WithString("database_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the database to delete"),
+                ),
+        )
+        s.AddTool(deleteDatabaseTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                databaseID, ok := request.Params.Arguments["database_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("database_id must be a string")
+                }</span>
+                <span class="cov0" title="0">_, err := client.CloudDatabase.Instances().Delete(ctx, databaseID, &amp;gobizfly.CloudDatabaseDelete{})
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to delete database: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Database %s deleted successfully", databaseID)), nil</span>
+        })
+
+        // Get database tool
+        <span class="cov8" title="1">getDatabaseTool := mcp.NewTool("bizflycloud_get_database",
+                mcp.WithDescription("Get details of a Bizfly Cloud database instance"),
+                mcp.WithString("database_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the database to get details for"),
+                ),
+        )
+        s.AddTool(getDatabaseTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                databaseID, ok := request.Params.Arguments["database_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("database_id must be a string")
+                }</span>
+                <span class="cov0" title="0">db, err := client.CloudDatabase.Instances().Get(ctx, databaseID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to get database: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("Database Details:\n\n")
+                result += fmt.Sprintf("Name: %s\n", db.Name)
+                result += fmt.Sprintf("ID: %s\n", db.ID)
+                result += fmt.Sprintf("Status: %s\n", db.Status)
+                result += fmt.Sprintf("DataStore Type: %s\n", db.Datastore.Type)
+                result += fmt.Sprintf("DataStore ID: %s\n", db.Datastore.ID)
+                result += fmt.Sprintf("Instance Type: %s\n", db.InstanceType)
+                result += fmt.Sprintf("Volume Size: %d GB\n", db.Volume.Size)
+                result += fmt.Sprintf("Volume Used: %.2f GB\n", db.Volume.Used)
+                result += fmt.Sprintf("Public Access: %v\n", db.PublicAccess)
+                result += fmt.Sprintf("Enable Failover: %v\n", db.EnableFailover)
+                result += fmt.Sprintf("Nodes Count: %d\n", len(db.Nodes))
+                if len(db.Nodes) &gt; 0 </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Nodes:\n")
+                        for _, node := range db.Nodes </span><span class="cov0" title="0">{
+                                result += fmt.Sprintf("  - Node ID: %s\n", node.ID)
+                        }</span>
+                }
+                <span class="cov0" title="0">result += fmt.Sprintf("Created At: %s\n", db.CreatedAt)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // List backups tool
+        <span class="cov8" title="1">listBackupsTool := mcp.NewTool("bizflycloud_list_database_backups",
+                mcp.WithDescription("List backups for a Bizfly Cloud database instance"),
+                mcp.WithString("database_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the database instance"),
+                ),
+        )
+        s.AddTool(listBackupsTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                databaseID, ok := request.Params.Arguments["database_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("database_id must be a string")
+                }</span>
+
+                <span class="cov0" title="0">resource := &amp;gobizfly.CloudDatabaseBackupResource{
+                        ResourceID:   databaseID,
+                        ResourceType: "instance",
+                }
+                backups, err := client.CloudDatabase.Backups().List(ctx, resource, nil)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to list backups: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := "Available backups:\n\n"
+                for _, backup := range backups </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Backup: %s\n", backup.Name)
+                        result += fmt.Sprintf("  ID: %s\n", backup.ID)
+                        result += fmt.Sprintf("  Status: %s\n", backup.Status)
+                        result += fmt.Sprintf("  Type: %s\n", backup.Type)
+                        result += fmt.Sprintf("  Size: %.2f GB\n", backup.Size)
+                        result += fmt.Sprintf("  Created At: %s\n", backup.Created)
+                        result += "\n"
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Create backup tool
+        <span class="cov8" title="1">createBackupTool := mcp.NewTool("bizflycloud_create_database_backup",
+                mcp.WithDescription("Create a backup for a Bizfly Cloud database instance"),
+                mcp.WithString("database_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the database instance"),
+                ),
+                mcp.WithString("backup_name",
+                        mcp.Required(),
+                        mcp.Description("Name of the backup"),
+                ),
+        )
+        s.AddTool(createBackupTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                databaseID, ok := request.Params.Arguments["database_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("database_id must be a string")
+                }</span>
+                <span class="cov0" title="0">backupName, ok := request.Params.Arguments["backup_name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("backup_name must be a string")
+                }</span>
+
+                <span class="cov0" title="0">backup, err := client.CloudDatabase.Backups().Create(ctx, "instance", databaseID, &amp;gobizfly.CloudDatabaseBackupCreate{
+                        Name: backupName,
+                })
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to create backup: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("Backup created successfully:\n")
+                result += fmt.Sprintf("  Name: %s\n", backup.Name)
+                result += fmt.Sprintf("  ID: %s\n", backup.ID)
+                result += fmt.Sprintf("  Status: %s\n", backup.Status)
+                result += fmt.Sprintf("  Type: %s\n", backup.Type)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+} </pre>
+		
+		<pre class="file" id="file5" style="display: none">package main
+
+import (
+        "context"
+        "errors"
+        "fmt"
+
+        "github.com/bizflycloud/gobizfly"
+        "github.com/mark3labs/mcp-go/mcp"
+        "github.com/mark3labs/mcp-go/server"
+)
+
+// RegisterDNSTools registers all DNS-related tools with the MCP server
+func RegisterDNSTools(s *server.MCPServer, client *gobizfly.Client) <span class="cov8" title="1">{
+        // List DNS zones tool
+        listZonesTool := mcp.NewTool("bizflycloud_list_dns_zones",
+                mcp.WithDescription("List all Bizfly Cloud DNS zones"),
+        )
+        s.AddTool(listZonesTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                zones, err := client.DNS.ListZones(ctx, &amp;gobizfly.ListOptions{})
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to list DNS zones: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := "Available DNS zones:\n\n"
+                for _, zone := range zones.Zones </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Zone: %s\n", zone.Name)
+                        result += fmt.Sprintf("  ID: %s\n", zone.ID)
+                        result += fmt.Sprintf("  Active: %v\n", zone.Active)
+                        result += fmt.Sprintf("  TTL: %d\n", zone.TTL)
+                        if len(zone.NameServer) &gt; 0 </span><span class="cov0" title="0">{
+                                result += fmt.Sprintf("  Name Servers: %v\n", zone.NameServer)
+                        }</span>
+                        <span class="cov0" title="0">result += fmt.Sprintf("  Created At: %s\n", zone.CreatedAt)
+                        result += "\n"</span>
+                }
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Create DNS zone tool
+        <span class="cov8" title="1">createZoneTool := mcp.NewTool("bizflycloud_create_dns_zone",
+                mcp.WithDescription("Create a new Bizfly Cloud DNS zone"),
+                mcp.WithString("name",
+                        mcp.Required(),
+                        mcp.Description("Name of the DNS zone (e.g., example.com)"),
+                ),
+                mcp.WithString("description",
+                        mcp.Description("Description of the DNS zone"),
+                ),
+        )
+        s.AddTool(createZoneTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                name, ok := request.Params.Arguments["name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("name must be a string")
+                }</span>
+                <span class="cov0" title="0">description, _ := request.Params.Arguments["description"].(string)
+
+                zone, err := client.DNS.CreateZone(ctx, &amp;gobizfly.CreateZonePayload{
+                        Name:        name,
+                        Description: description,
+                })
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to create DNS zone: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("DNS zone created successfully:\n")
+                result += fmt.Sprintf("  Name: %s\n", zone.Name)
+                result += fmt.Sprintf("  ID: %s\n", zone.ID)
+                result += fmt.Sprintf("  Active: %v\n", zone.Active)
+                result += fmt.Sprintf("  TTL: %d\n", zone.TTL)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Get DNS zone tool
+        <span class="cov8" title="1">getZoneTool := mcp.NewTool("bizflycloud_get_dns_zone",
+                mcp.WithDescription("Get details of a Bizfly Cloud DNS zone"),
+                mcp.WithString("zone_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the DNS zone"),
+                ),
+        )
+        s.AddTool(getZoneTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                zoneID, ok := request.Params.Arguments["zone_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("zone_id must be a string")
+                }</span>
+                <span class="cov0" title="0">zone, err := client.DNS.GetZone(ctx, zoneID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to get DNS zone: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("DNS Zone Details:\n\n")
+                result += fmt.Sprintf("Name: %s\n", zone.Name)
+                result += fmt.Sprintf("ID: %s\n", zone.ID)
+                result += fmt.Sprintf("Active: %v\n", zone.Active)
+                result += fmt.Sprintf("TTL: %d\n", zone.TTL)
+                if len(zone.NameServer) &gt; 0 </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Name Servers: %v\n", zone.NameServer)
+                }</span>
+                <span class="cov0" title="0">result += fmt.Sprintf("Records Count: %d\n", len(zone.RecordsSet))
+                result += fmt.Sprintf("Created At: %s\n", zone.CreatedAt)
+                result += fmt.Sprintf("Updated At: %s\n", zone.UpdatedAt)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Delete DNS zone tool
+        <span class="cov8" title="1">deleteZoneTool := mcp.NewTool("bizflycloud_delete_dns_zone",
+                mcp.WithDescription("Delete a Bizfly Cloud DNS zone"),
+                mcp.WithString("zone_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the DNS zone to delete"),
+                ),
+        )
+        s.AddTool(deleteZoneTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                zoneID, ok := request.Params.Arguments["zone_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("zone_id must be a string")
+                }</span>
+                <span class="cov0" title="0">err := client.DNS.DeleteZone(ctx, zoneID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to delete DNS zone: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("DNS zone %s deleted successfully", zoneID)), nil</span>
+        })
+
+        // Create DNS record tool
+        <span class="cov8" title="1">createRecordTool := mcp.NewTool("bizflycloud_create_dns_record",
+                mcp.WithDescription("Create a DNS record in a Bizfly Cloud DNS zone"),
+                mcp.WithString("zone_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the DNS zone"),
+                ),
+                mcp.WithString("name",
+                        mcp.Required(),
+                        mcp.Description("Name of the DNS record"),
+                ),
+                mcp.WithString("type",
+                        mcp.Required(),
+                        mcp.Description("Type of DNS record (A, AAAA, CNAME, MX, TXT, SRV, etc.)"),
+                ),
+                mcp.WithString("data",
+                        mcp.Required(),
+                        mcp.Description("DNS record data (comma-separated for multiple values)"),
+                ),
+                mcp.WithNumber("ttl",
+                        mcp.Description("TTL for the DNS record"),
+                ),
+        )
+        s.AddTool(createRecordTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                zoneID, ok := request.Params.Arguments["zone_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("zone_id must be a string")
+                }</span>
+                <span class="cov0" title="0">name, ok := request.Params.Arguments["name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("name must be a string")
+                }</span>
+                <span class="cov0" title="0">recordType, ok := request.Params.Arguments["type"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("type must be a string")
+                }</span>
+                <span class="cov0" title="0">dataStr, ok := request.Params.Arguments["data"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("data must be a string")
+                }</span>
+
+                <span class="cov0" title="0">ttl := 3600 // Default TTL
+                if ttlVal, ok := request.Params.Arguments["ttl"].(float64); ok </span><span class="cov0" title="0">{
+                        ttl = int(ttlVal)
+                }</span>
+
+                <span class="cov0" title="0">var payload interface{}
+                payload = &amp;gobizfly.CreateNormalRecordPayload{
+                        BaseCreateRecordPayload: gobizfly.BaseCreateRecordPayload{
+                                Name: name,
+                                Type: recordType,
+                                TTL:  ttl,
+                        },
+                        Data: []string{dataStr},
+                }
+
+                record, err := client.DNS.CreateRecord(ctx, zoneID, payload)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to create DNS record: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("DNS record created successfully:\n")
+                result += fmt.Sprintf("  Name: %s\n", record.Name)
+                result += fmt.Sprintf("  ID: %s\n", record.ID)
+                result += fmt.Sprintf("  Type: %s\n", record.Type)
+                result += fmt.Sprintf("  TTL: %d\n", record.TTL)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Get DNS record tool
+        <span class="cov8" title="1">getRecordTool := mcp.NewTool("bizflycloud_get_dns_record",
+                mcp.WithDescription("Get details of a Bizfly Cloud DNS record"),
+                mcp.WithString("record_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the DNS record"),
+                ),
+        )
+        s.AddTool(getRecordTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                recordID, ok := request.Params.Arguments["record_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("record_id must be a string")
+                }</span>
+                <span class="cov0" title="0">record, err := client.DNS.GetRecord(ctx, recordID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to get DNS record: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("DNS Record Details:\n\n")
+                result += fmt.Sprintf("Name: %s\n", record.Name)
+                result += fmt.Sprintf("ID: %s\n", record.ID)
+                result += fmt.Sprintf("Type: %s\n", record.Type)
+                result += fmt.Sprintf("TTL: %d\n", record.TTL)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Delete DNS record tool
+        <span class="cov8" title="1">deleteRecordTool := mcp.NewTool("bizflycloud_delete_dns_record",
+                mcp.WithDescription("Delete a Bizfly Cloud DNS record"),
+                mcp.WithString("record_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the DNS record to delete"),
+                ),
+        )
+        s.AddTool(deleteRecordTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                recordID, ok := request.Params.Arguments["record_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("record_id must be a string")
+                }</span>
+                <span class="cov0" title="0">err := client.DNS.DeleteRecord(ctx, recordID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to delete DNS record: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("DNS record %s deleted successfully", recordID)), nil</span>
+        })
+}
+
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package main
+
+import (
+        "context"
+        "errors"
+        "fmt"
+
+        "github.com/bizflycloud/gobizfly"
+        "github.com/mark3labs/mcp-go/mcp"
+        "github.com/mark3labs/mcp-go/server"
+)
+
+// RegisterKMSTools registers all KMS-related tools with the MCP server
+func RegisterKMSTools(s *server.MCPServer, client *gobizfly.Client) <span class="cov8" title="1">{
+        // List KMS certificates tool
+        listCertificatesTool := mcp.NewTool("bizflycloud_list_kms_certificates",
+                mcp.WithDescription("List all Bizfly Cloud KMS certificates"),
+        )
+        s.AddTool(listCertificatesTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                certificates, err := client.KMS.Certificates().List(ctx)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to list KMS certificates: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := "Available KMS certificates:\n\n"
+                for _, cert := range certificates </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Certificate: %s\n", cert.Name)
+                        result += fmt.Sprintf("  Container ID: %s\n", cert.ContainerID)
+                        result += "\n"
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Get KMS certificate tool
+        <span class="cov8" title="1">getCertificateTool := mcp.NewTool("bizflycloud_get_kms_certificate",
+                mcp.WithDescription("Get details of a Bizfly Cloud KMS certificate"),
+                mcp.WithString("certificate_id",
+                        mcp.Required(),
+                        mcp.Description("Container ID of the KMS certificate"),
+                ),
+        )
+        s.AddTool(getCertificateTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                certificateID, ok := request.Params.Arguments["certificate_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("certificate_id must be a string")
+                }</span>
+                <span class="cov0" title="0">cert, err := client.KMS.Certificates().Get(ctx, certificateID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to get KMS certificate: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("KMS Certificate Details:\n\n")
+                result += fmt.Sprintf("Name: %s\n", cert.Name)
+                result += fmt.Sprintf("Container ID: %s\n", cert.ContainerID)
+                result += fmt.Sprintf("Certificate: %s\n", cert.Certificate)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Create KMS certificate tool
+        <span class="cov8" title="1">createCertificateTool := mcp.NewTool("bizflycloud_create_kms_certificate",
+                mcp.WithDescription("Create a new Bizfly Cloud KMS certificate"),
+                mcp.WithString("name",
+                        mcp.Required(),
+                        mcp.Description("Name of the certificate container"),
+                ),
+                mcp.WithString("certificate_name",
+                        mcp.Required(),
+                        mcp.Description("Name for the certificate"),
+                ),
+                mcp.WithString("certificate_payload",
+                        mcp.Required(),
+                        mcp.Description("Certificate content (PEM format)"),
+                ),
+                mcp.WithString("private_key_name",
+                        mcp.Required(),
+                        mcp.Description("Name for the private key"),
+                ),
+                mcp.WithString("private_key_payload",
+                        mcp.Required(),
+                        mcp.Description("Private key content (PEM format)"),
+                ),
+                mcp.WithString("private_key_passphrase_name",
+                        mcp.Description("Name for the private key passphrase"),
+                ),
+                mcp.WithString("private_key_passphrase_payload",
+                        mcp.Description("Private key passphrase"),
+                ),
+        )
+        s.AddTool(createCertificateTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                name, ok := request.Params.Arguments["name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("name must be a string")
+                }</span>
+                <span class="cov0" title="0">certName, ok := request.Params.Arguments["certificate_name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("certificate_name must be a string")
+                }</span>
+                <span class="cov0" title="0">certPayload, ok := request.Params.Arguments["certificate_payload"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("certificate_payload must be a string")
+                }</span>
+                <span class="cov0" title="0">keyName, ok := request.Params.Arguments["private_key_name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("private_key_name must be a string")
+                }</span>
+                <span class="cov0" title="0">keyPayload, ok := request.Params.Arguments["private_key_payload"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("private_key_payload must be a string")
+                }</span>
+
+                <span class="cov0" title="0">req := &amp;gobizfly.KMSCertificateContainerCreateRequest{
+                        CertContainer: gobizfly.KMSCertContainer{
+                                Name: name,
+                                Certificate: gobizfly.KMSCertificateCreateReqest{
+                                        Name:    certName,
+                                        Payload: certPayload,
+                                },
+                                PrivateKey: gobizfly.KMSPrivateKeyCreateReqest{
+                                        Name:    keyName,
+                                        Payload: keyPayload,
+                                },
+                        },
+                }
+
+                if passphraseName, ok := request.Params.Arguments["private_key_passphrase_name"].(string); ok &amp;&amp; passphraseName != "" </span><span class="cov0" title="0">{
+                        if passphrasePayload, ok := request.Params.Arguments["private_key_passphrase_payload"].(string); ok &amp;&amp; passphrasePayload != "" </span><span class="cov0" title="0">{
+                                req.CertContainer.PrivateKeyPassphrase = gobizfly.KMSPrivateKeyPassphraseCreateReqest{
+                                        Name:    passphraseName,
+                                        Payload: passphrasePayload,
+                                }
+                        }</span>
+                }
+
+                <span class="cov0" title="0">resp, err := client.KMS.Certificates().Create(ctx, req)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to create KMS certificate: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("KMS certificate created successfully:\n")
+                result += fmt.Sprintf("  Certificate Href: %s\n", resp.CertificateHref)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Delete KMS certificate tool
+        <span class="cov8" title="1">deleteCertificateTool := mcp.NewTool("bizflycloud_delete_kms_certificate",
+                mcp.WithDescription("Delete a Bizfly Cloud KMS certificate"),
+                mcp.WithString("certificate_id",
+                        mcp.Required(),
+                        mcp.Description("Container ID of the KMS certificate to delete"),
+                ),
+        )
+        s.AddTool(deleteCertificateTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                certificateID, ok := request.Params.Arguments["certificate_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("certificate_id must be a string")
+                }</span>
+                <span class="cov0" title="0">err := client.KMS.Certificates().Delete(ctx, certificateID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to delete KMS certificate: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("KMS certificate %s deleted successfully", certificateID)), nil</span>
+        })
+}
+
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package main
+
+import (
+        "context"
+        "errors"
+        "fmt"
+
+        "github.com/bizflycloud/gobizfly"
+        "github.com/mark3labs/mcp-go/mcp"
+        "github.com/mark3labs/mcp-go/server"
+)
+
+// RegisterKubernetesTools registers all Kubernetes-related tools with the MCP server
+func RegisterKubernetesTools(s *server.MCPServer, client *gobizfly.Client) <span class="cov8" title="1">{
+        // List clusters tool
+        listClustersTool := mcp.NewTool("bizflycloud_list_kubernetes_clusters",
+                mcp.WithDescription("List all Bizfly Cloud Kubernetes clusters"),
+        )
+        s.AddTool(listClustersTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                clusters, err := client.KubernetesEngine.List(ctx, nil)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to list clusters: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := "Available Kubernetes clusters:\n\n"
+                for _, c := range clusters </span><span class="cov0" title="0">{
+                        // Get full cluster details
+                        cluster, err := client.KubernetesEngine.Get(ctx, c.UID)
+                        if err != nil </span><span class="cov0" title="0">{
+                                return mcp.NewToolResultError(fmt.Sprintf("Failed to get cluster details: %v", err)), nil
+                        }</span>
+
+                        <span class="cov0" title="0">result += fmt.Sprintf("Cluster: %s\n", cluster.Name)
+                        result += fmt.Sprintf("  ID: %s\n", cluster.UID)
+                        result += fmt.Sprintf("  Status: %s\n", cluster.ClusterStatus)
+                        result += fmt.Sprintf("  Version: %s\n", cluster.Version)
+                        result += fmt.Sprintf("  Node Pools Count: %d\n", cluster.WorkerPoolsCount)
+                        result += fmt.Sprintf("  Created At: %s\n", cluster.CreatedAt)
+                        result += "\nWorker Pools:\n"
+                        for _, pool := range cluster.WorkerPools </span><span class="cov0" title="0">{
+                                result += fmt.Sprintf("  - Name: %s\n", pool.Name)
+                                result += fmt.Sprintf("    ID: %s\n", pool.UID)
+                                result += fmt.Sprintf("    Flavor: %s\n", pool.Flavor)
+                                result += fmt.Sprintf("    Profile Type: %s\n", pool.ProfileType)
+                                result += fmt.Sprintf("    Volume Type: %s\n", pool.VolumeType)
+                                result += fmt.Sprintf("    Volume Size: %d GB\n", pool.VolumeSize)
+                                result += fmt.Sprintf("    Desired Size: %d nodes\n", pool.DesiredSize)
+                                result += "\n"
+                        }</span>
+                        <span class="cov0" title="0">result += "\n"</span>
+                }
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Create cluster tool
+        <span class="cov8" title="1">createClusterTool := mcp.NewTool("bizflycloud_create_kubernetes_cluster",
+                mcp.WithDescription("Create a new Bizfly Cloud Kubernetes cluster"),
+                mcp.WithString("name",
+                        mcp.Required(),
+                        mcp.Description("Name of the cluster"),
+                ),
+                mcp.WithString("version",
+                        mcp.Required(),
+                        mcp.Description("Kubernetes version"),
+                ),
+                mcp.WithString("worker_flavor",
+                        mcp.Required(),
+                        mcp.Description("Flavor for worker nodes"),
+                ),
+                mcp.WithNumber("worker_count",
+                        mcp.Required(),
+                        mcp.Description("Number of worker nodes"),
+                ),
+        )
+        s.AddTool(createClusterTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                name, ok := request.Params.Arguments["name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("name must be a string")
+                }</span>
+                <span class="cov0" title="0">version, ok := request.Params.Arguments["version"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("version must be a string")
+                }</span>
+                <span class="cov0" title="0">workerFlavor, ok := request.Params.Arguments["worker_flavor"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("worker_flavor must be a string")
+                }</span>
+                <span class="cov0" title="0">workerCount, ok := request.Params.Arguments["worker_count"].(float64)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("worker_count must be a number")
+                }</span>
+
+                // Get the flavor ID from the name
+                <span class="cov0" title="0">flavors, err := client.CloudServer.Flavors().List(ctx)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to get flavors: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">var flavorID string
+                for _, flavor := range flavors </span><span class="cov0" title="0">{
+                        if flavor.Name == workerFlavor </span><span class="cov0" title="0">{
+                                flavorID = flavor.ID
+                                break</span>
+                        }
+                }
+                <span class="cov0" title="0">if flavorID == "" </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Flavor '%s' not found", workerFlavor)), nil
+                }</span>
+
+                <span class="cov0" title="0">cluster, err := client.KubernetesEngine.Create(ctx, &amp;gobizfly.ClusterCreateRequest{
+                        Name:    name,
+                        Version: version,
+                        WorkerPools: []gobizfly.WorkerPool{
+                                {
+                                        Name:              "default-pool",
+                                        Flavor:            flavorID,
+                                        ProfileType:       "premium",
+                                        VolumeType:        "PREMIUM-HDD1",
+                                        VolumeSize:        50,
+                                        DesiredSize:       int(workerCount),
+                                        EnableAutoScaling: false,
+                                        MinSize:           int(workerCount),
+                                        MaxSize:           int(workerCount),
+                                        NetworkPlan:       "free_plan",
+                                        BillingPlan:       "on_demand",
+                                        AvailabilityZone:  "HN1",
+                                },
+                        },
+                })
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to create cluster: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("Cluster created successfully:\n")
+                result += fmt.Sprintf("  Name: %s\n", cluster.Name)
+                result += fmt.Sprintf("  ID: %s\n", cluster.UID)
+                result += fmt.Sprintf("  Status: %s\n", cluster.ClusterStatus)
+                result += fmt.Sprintf("  Version: %s\n", cluster.Version)
+                result += fmt.Sprintf("  Node Pools Count: %d\n", cluster.WorkerPoolsCount)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Delete cluster tool
+        <span class="cov8" title="1">deleteClusterTool := mcp.NewTool("bizflycloud_delete_kubernetes_cluster",
+                mcp.WithDescription("Delete a Bizfly Cloud Kubernetes cluster"),
+                mcp.WithString("cluster_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the cluster to delete"),
+                ),
+        )
+        s.AddTool(deleteClusterTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                clusterID, ok := request.Params.Arguments["cluster_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("cluster_id must be a string")
+                }</span>
+                <span class="cov0" title="0">err := client.KubernetesEngine.Delete(ctx, clusterID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to delete cluster: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Cluster %s deleted successfully", clusterID)), nil</span>
+        })
+
+        // List cluster nodes tool
+        <span class="cov8" title="1">listClusterNodesTool := mcp.NewTool("bizflycloud_list_kubernetes_nodes",
+                mcp.WithDescription("List nodes in a Bizfly Cloud Kubernetes cluster"),
+                mcp.WithString("cluster_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the cluster"),
+                ),
+                mcp.WithString("pool_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the node pool"),
+                ),
+        )
+        s.AddTool(listClusterNodesTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                clusterID, ok := request.Params.Arguments["cluster_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("cluster_id must be a string")
+                }</span>
+                <span class="cov0" title="0">poolID, ok := request.Params.Arguments["pool_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("pool_id must be a string")
+                }</span>
+
+                // Get cluster details to find the pool
+                <span class="cov0" title="0">cluster, err := client.KubernetesEngine.Get(ctx, clusterID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to get cluster: %v", err)), nil
+                }</span>
+
+                // Find the pool
+                <span class="cov0" title="0">var pool *gobizfly.ExtendedWorkerPool
+                for _, p := range cluster.WorkerPools </span><span class="cov0" title="0">{
+                        if p.Name == poolID </span><span class="cov0" title="0">{
+                                pool = &amp;p
+                                break</span>
+                        }
+                }
+                <span class="cov0" title="0">if pool == nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Pool %s not found in cluster %s", poolID, clusterID)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("Worker Pool Details:\n")
+                result += fmt.Sprintf("  Name: %s\n", pool.Name)
+                result += fmt.Sprintf("  Flavor: %s\n", pool.Flavor)
+                result += fmt.Sprintf("  Profile Type: %s\n", pool.ProfileType)
+                result += fmt.Sprintf("  Volume Type: %s\n", pool.VolumeType)
+                result += fmt.Sprintf("  Volume Size: %d GB\n", pool.VolumeSize)
+                result += fmt.Sprintf("  Availability Zone: %s\n", pool.AvailabilityZone)
+                result += fmt.Sprintf("  Desired Size: %d\n", pool.DesiredSize)
+                result += fmt.Sprintf("  Auto Scaling: %v\n", pool.EnableAutoScaling)
+                if pool.EnableAutoScaling </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("  Min Size: %d\n", pool.MinSize)
+                        result += fmt.Sprintf("  Max Size: %d\n", pool.MaxSize)
+                }</span>
+                <span class="cov0" title="0">if len(pool.Tags) &gt; 0 </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("  Tags: %v\n", pool.Tags)
+                }</span>
+                <span class="cov0" title="0">if len(pool.Labels) &gt; 0 </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("  Labels: %v\n", pool.Labels)
+                }</span>
+                <span class="cov0" title="0">result += fmt.Sprintf("  Network Plan: %s\n", pool.NetworkPlan)
+                result += fmt.Sprintf("  Billing Plan: %s\n", pool.BillingPlan)
+                result += "\n"
+
+                // Get nodes in the pool
+                nodes, err := client.KubernetesEngine.GetClusterWorkerPool(ctx, clusterID, poolID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to list nodes: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result += fmt.Sprintf("Nodes in pool %s:\n\n", pool.Name)
+                for _, node := range nodes.Nodes </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Node: %s\n", node.Name)
+                        result += fmt.Sprintf("  Status: %s\n", node.Status)
+                        result += "\n"
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Get cluster tool
+        <span class="cov8" title="1">getClusterTool := mcp.NewTool("bizflycloud_get_kubernetes_cluster",
+                mcp.WithDescription("Get details of a Bizfly Cloud Kubernetes cluster"),
+                mcp.WithString("cluster_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the cluster to get details for"),
+                ),
+        )
+        s.AddTool(getClusterTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                clusterID, ok := request.Params.Arguments["cluster_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("cluster_id must be a string")
+                }</span>
+                <span class="cov0" title="0">cluster, err := client.KubernetesEngine.Get(ctx, clusterID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to get cluster: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("Cluster Details:\n\n")
+                result += fmt.Sprintf("Name: %s\n", cluster.Name)
+                result += fmt.Sprintf("ID: %s\n", cluster.UID)
+                result += fmt.Sprintf("Status: %s\n", cluster.ClusterStatus)
+                result += fmt.Sprintf("Provision Status: %s\n", cluster.ProvisionStatus)
+                result += fmt.Sprintf("Version: %s\n", cluster.Version.K8SVersion)
+                result += fmt.Sprintf("Worker Pools Count: %d\n", cluster.WorkerPoolsCount)
+                result += fmt.Sprintf("Auto Upgrade: %v\n", cluster.AutoUpgrade)
+                result += fmt.Sprintf("Created At: %s\n", cluster.CreatedAt)
+                result += "\nWorker Pools:\n"
+                for _, pool := range cluster.WorkerPools </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("  - Name: %s\n", pool.Name)
+                        result += fmt.Sprintf("    ID: %s\n", pool.UID)
+                        result += fmt.Sprintf("    Flavor: %s\n", pool.Flavor)
+                        result += fmt.Sprintf("    Profile Type: %s\n", pool.ProfileType)
+                        result += fmt.Sprintf("    Volume Type: %s\n", pool.VolumeType)
+                        result += fmt.Sprintf("    Volume Size: %d GB\n", pool.VolumeSize)
+                        result += fmt.Sprintf("    Desired Size: %d nodes\n", pool.DesiredSize)
+                        result += fmt.Sprintf("    Auto Scaling: %v\n", pool.EnableAutoScaling)
+                        result += "\n"
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Update pool tool
+        <span class="cov8" title="1">updatePoolTool := mcp.NewTool("bizflycloud_update_kubernetes_pool",
+                mcp.WithDescription("Update a worker pool in a Bizfly Cloud Kubernetes cluster"),
+                mcp.WithString("cluster_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the cluster"),
+                ),
+                mcp.WithString("pool_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the pool to update"),
+                ),
+                mcp.WithNumber("desired_size",
+                        mcp.Description("Desired number of nodes in the pool"),
+                ),
+                mcp.WithBoolean("enable_autoscaling",
+                        mcp.Description("Enable auto scaling for the pool"),
+                ),
+                mcp.WithNumber("min_size",
+                        mcp.Description("Minimum number of nodes for auto scaling"),
+                ),
+                mcp.WithNumber("max_size",
+                        mcp.Description("Maximum number of nodes for auto scaling"),
+                ),
+        )
+        s.AddTool(updatePoolTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                clusterID, ok := request.Params.Arguments["cluster_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("cluster_id must be a string")
+                }</span>
+                <span class="cov0" title="0">poolID, ok := request.Params.Arguments["pool_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("pool_id must be a string")
+                }</span>
+
+                <span class="cov0" title="0">req := &amp;gobizfly.UpdateWorkerPoolRequest{}
+                if desiredSize, ok := request.Params.Arguments["desired_size"].(float64); ok </span><span class="cov0" title="0">{
+                        req.DesiredSize = int(desiredSize)
+                }</span>
+                <span class="cov0" title="0">if enableAutoScaling, ok := request.Params.Arguments["enable_autoscaling"].(bool); ok </span><span class="cov0" title="0">{
+                        req.EnableAutoScaling = enableAutoScaling
+                }</span>
+                <span class="cov0" title="0">if minSize, ok := request.Params.Arguments["min_size"].(float64); ok </span><span class="cov0" title="0">{
+                        req.MinSize = int(minSize)
+                }</span>
+                <span class="cov0" title="0">if maxSize, ok := request.Params.Arguments["max_size"].(float64); ok </span><span class="cov0" title="0">{
+                        req.MaxSize = int(maxSize)
+                }</span>
+
+                <span class="cov0" title="0">err := client.KubernetesEngine.UpdateClusterWorkerPool(ctx, clusterID, poolID, req)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to update pool: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Pool %s in cluster %s updated successfully", poolID, clusterID)), nil</span>
+        })
+
+        // Resize pool tool (uses update with desired_size)
+        <span class="cov8" title="1">resizePoolTool := mcp.NewTool("bizflycloud_resize_kubernetes_pool",
+                mcp.WithDescription("Resize a worker pool in a Bizfly Cloud Kubernetes cluster"),
+                mcp.WithString("cluster_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the cluster"),
+                ),
+                mcp.WithString("pool_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the pool to resize"),
+                ),
+                mcp.WithNumber("desired_size",
+                        mcp.Required(),
+                        mcp.Description("New desired number of nodes in the pool"),
+                ),
+        )
+        s.AddTool(resizePoolTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                clusterID, ok := request.Params.Arguments["cluster_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("cluster_id must be a string")
+                }</span>
+                <span class="cov0" title="0">poolID, ok := request.Params.Arguments["pool_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("pool_id must be a string")
+                }</span>
+                <span class="cov0" title="0">desiredSize, ok := request.Params.Arguments["desired_size"].(float64)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("desired_size must be a number")
+                }</span>
+
+                <span class="cov0" title="0">req := &amp;gobizfly.UpdateWorkerPoolRequest{
+                        DesiredSize: int(desiredSize),
+                }
+                err := client.KubernetesEngine.UpdateClusterWorkerPool(ctx, clusterID, poolID, req)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to resize pool: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Pool %s in cluster %s resized to %d nodes successfully", poolID, clusterID, int(desiredSize))), nil</span>
+        })
+
+        // Delete pool tool
+        <span class="cov8" title="1">deletePoolTool := mcp.NewTool("bizflycloud_delete_kubernetes_pool",
+                mcp.WithDescription("Delete a worker pool from a Bizfly Cloud Kubernetes cluster"),
+                mcp.WithString("cluster_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the cluster"),
+                ),
+                mcp.WithString("pool_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the pool to delete"),
+                ),
+        )
+        s.AddTool(deletePoolTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                clusterID, ok := request.Params.Arguments["cluster_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("cluster_id must be a string")
+                }</span>
+                <span class="cov0" title="0">poolID, ok := request.Params.Arguments["pool_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("pool_id must be a string")
+                }</span>
+                <span class="cov0" title="0">err := client.KubernetesEngine.DeleteClusterWorkerPool(ctx, clusterID, poolID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to delete pool: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Pool %s deleted from cluster %s successfully", poolID, clusterID)), nil</span>
+        })
+}</pre>
+		
+		<pre class="file" id="file8" style="display: none">package main
+
+import (
+        "context"
+        "errors"
+        "fmt"
+
+        "github.com/bizflycloud/gobizfly"
+        "github.com/mark3labs/mcp-go/mcp"
+        "github.com/mark3labs/mcp-go/server"
+)
+
+// RegisterLoadBalancerTools registers all load balancer-related tools with the MCP server
+func RegisterLoadBalancerTools(s *server.MCPServer, client *gobizfly.Client) <span class="cov8" title="1">{
+        // List load balancers tool
+        listLoadBalancersTool := mcp.NewTool("bizflycloud_list_loadbalancers",
+                mcp.WithDescription("List all Bizfly Cloud load balancers"),
+        )
+        s.AddTool(listLoadBalancersTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                loadbalancers, err := client.CloudLoadBalancer.List(ctx, &amp;gobizfly.ListOptions{})
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to list load balancers: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := "Available load balancers:\n\n"
+                for _, lb := range loadbalancers </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Load Balancer: %s\n", lb.Name)
+                        result += fmt.Sprintf("  ID: %s\n", lb.ID)
+                        result += fmt.Sprintf("  Provider Status: %s\n", lb.ProvisioningStatus)
+                        result += fmt.Sprintf("  Operating Status: %s\n", lb.OperatingStatus)
+                        result += fmt.Sprintf("  Type: %s\n", lb.Type)
+                        result += fmt.Sprintf("  Network Type: %s\n", lb.NetworkType)
+                        result += fmt.Sprintf("  Created At: %s\n", lb.CreatedAt)
+                        result += "\n"
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Create load balancer tool
+        <span class="cov8" title="1">createLoadBalancerTool := mcp.NewTool("bizflycloud_create_loadbalancer",
+                mcp.WithDescription("Create a new Bizfly Cloud load balancer"),
+                mcp.WithString("name",
+                        mcp.Required(),
+                        mcp.Description("Name of the load balancer"),
+                ),
+                mcp.WithString("network_type",
+                        mcp.Required(),
+                        mcp.Description("Network type (external, internal)"),
+                ),
+                mcp.WithString("type",
+                        mcp.Required(),
+                        mcp.Description("Type of load balancer"),
+                ),
+                mcp.WithString("description",
+                        mcp.Description("Description of the load balancer"),
+                ),
+        )
+        s.AddTool(createLoadBalancerTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                name, ok := request.Params.Arguments["name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("name must be a string")
+                }</span>
+                <span class="cov0" title="0">networkType, ok := request.Params.Arguments["network_type"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("network_type must be a string")
+                }</span>
+                <span class="cov0" title="0">lbType, ok := request.Params.Arguments["type"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("type must be a string")
+                }</span>
+                <span class="cov0" title="0">description, _ := request.Params.Arguments["description"].(string)
+
+                loadbalancer, err := client.CloudLoadBalancer.Create(ctx, &amp;gobizfly.LoadBalancerCreateRequest{
+                        Name:        name,
+                        NetworkType: networkType,
+                        Type:        lbType,
+                        Description: description,
+                })
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to create load balancer: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("Load balancer created successfully:\n")
+                result += fmt.Sprintf("  Name: %s\n", loadbalancer.Name)
+                result += fmt.Sprintf("  ID: %s\n", loadbalancer.ID)
+                result += fmt.Sprintf("  Provider Status: %s\n", loadbalancer.ProvisioningStatus)
+                result += fmt.Sprintf("  Operating Status: %s\n", loadbalancer.OperatingStatus)
+                result += fmt.Sprintf("  Type: %s\n", loadbalancer.Type)
+                result += fmt.Sprintf("  Network Type: %s\n", loadbalancer.NetworkType)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Delete load balancer tool
+        <span class="cov8" title="1">deleteLoadBalancerTool := mcp.NewTool("bizflycloud_delete_loadbalancer",
+                mcp.WithDescription("Delete a Bizfly Cloud load balancer"),
+                mcp.WithString("loadbalancer_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the load balancer to delete"),
+                ),
+        )
+        s.AddTool(deleteLoadBalancerTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                loadbalancerID, ok := request.Params.Arguments["loadbalancer_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("loadbalancer_id must be a string")
+                }</span>
+                <span class="cov0" title="0">err := client.CloudLoadBalancer.Delete(ctx, &amp;gobizfly.LoadBalancerDeleteRequest{
+                        ID:      loadbalancerID,
+                        Cascade: false,
+                })
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to delete load balancer: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Load balancer %s deleted successfully", loadbalancerID)), nil</span>
+        })
+
+        // Get load balancer tool
+        <span class="cov8" title="1">getLoadBalancerTool := mcp.NewTool("bizflycloud_get_loadbalancer",
+                mcp.WithDescription("Get details of a Bizfly Cloud load balancer"),
+                mcp.WithString("loadbalancer_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the load balancer to get details for"),
+                ),
+        )
+        s.AddTool(getLoadBalancerTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                loadbalancerID, ok := request.Params.Arguments["loadbalancer_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("loadbalancer_id must be a string")
+                }</span>
+                <span class="cov0" title="0">lb, err := client.CloudLoadBalancer.Get(ctx, loadbalancerID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to get load balancer: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("Load Balancer Details:\n\n")
+                result += fmt.Sprintf("Name: %s\n", lb.Name)
+                result += fmt.Sprintf("ID: %s\n", lb.ID)
+                result += fmt.Sprintf("Description: %s\n", lb.Description)
+                result += fmt.Sprintf("Provider Status: %s\n", lb.ProvisioningStatus)
+                result += fmt.Sprintf("Operating Status: %s\n", lb.OperatingStatus)
+                result += fmt.Sprintf("Type: %s\n", lb.Type)
+                result += fmt.Sprintf("Network Type: %s\n", lb.NetworkType)
+                result += fmt.Sprintf("VIP Address: %s\n", lb.VipAddress)
+                result += fmt.Sprintf("Admin State: %v\n", lb.AdminStateUp)
+                result += fmt.Sprintf("Created At: %s\n", lb.CreatedAt)
+                result += fmt.Sprintf("Updated At: %s\n", lb.UpdatedAt)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Update load balancer tool
+        <span class="cov8" title="1">updateLoadBalancerTool := mcp.NewTool("bizflycloud_update_loadbalancer",
+                mcp.WithDescription("Update a Bizfly Cloud load balancer"),
+                mcp.WithString("loadbalancer_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the load balancer to update"),
+                ),
+                mcp.WithString("name",
+                        mcp.Description("New name for the load balancer"),
+                ),
+                mcp.WithString("description",
+                        mcp.Description("New description for the load balancer"),
+                ),
+                mcp.WithBoolean("admin_state_up",
+                        mcp.Description("Admin state up (true/false)"),
+                ),
+        )
+        s.AddTool(updateLoadBalancerTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                loadbalancerID, ok := request.Params.Arguments["loadbalancer_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("loadbalancer_id must be a string")
+                }</span>
+
+                <span class="cov0" title="0">req := &amp;gobizfly.LoadBalancerUpdateRequest{}
+                if name, ok := request.Params.Arguments["name"].(string); ok &amp;&amp; name != "" </span><span class="cov0" title="0">{
+                        req.Name = &amp;name
+                }</span>
+                <span class="cov0" title="0">if desc, ok := request.Params.Arguments["description"].(string); ok &amp;&amp; desc != "" </span><span class="cov0" title="0">{
+                        req.Description = &amp;desc
+                }</span>
+                <span class="cov0" title="0">if adminStateUp, ok := request.Params.Arguments["admin_state_up"].(bool); ok </span><span class="cov0" title="0">{
+                        req.AdminStateUp = &amp;adminStateUp
+                }</span>
+
+                <span class="cov0" title="0">lb, err := client.CloudLoadBalancer.Update(ctx, loadbalancerID, req)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to update load balancer: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("Load balancer updated successfully:\n")
+                result += fmt.Sprintf("  Name: %s\n", lb.Name)
+                result += fmt.Sprintf("  ID: %s\n", lb.ID)
+                result += fmt.Sprintf("  Description: %s\n", lb.Description)
+                result += fmt.Sprintf("  Admin State: %v\n", lb.AdminStateUp)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+} </pre>
+		
+		<pre class="file" id="file9" style="display: none">package main
+
+import (
+        "context"
+        "log"
+        "os"
+
+        "github.com/bizflycloud/gobizfly"
+        "github.com/mark3labs/mcp-go/server"
+)
+
+const (
+        defaultRegion = "HaNoi"
+        defaultAPIURL = "https://manage.bizflycloud.vn"
+)
+
+func main() <span class="cov0" title="0">{
+        // Load environment variables
+        username := os.Getenv("BIZFLY_USERNAME")
+        password := os.Getenv("BIZFLY_PASSWORD")
+        region := os.Getenv("BIZFLY_REGION")
+        apiURL := os.Getenv("BIZFLY_API_URL")
+
+        if username == "" || password == "" </span><span class="cov0" title="0">{
+                log.Fatal("BIZFLY_USERNAME and BIZFLY_PASSWORD environment variables are required")
+        }</span>
+
+        // Set defaults if not provided
+        <span class="cov0" title="0">if region == "" </span><span class="cov0" title="0">{
+                region = defaultRegion
+        }</span>
+        <span class="cov0" title="0">if apiURL == "" </span><span class="cov0" title="0">{
+                apiURL = defaultAPIURL
+        }</span>
+
+        // Initialize Bizfly client
+        <span class="cov0" title="0">client, err := gobizfly.NewClient(
+                gobizfly.WithAPIURL(apiURL),
+                gobizfly.WithRegionName(region),
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("Failed to create BizflyCloud client: %v", err)
+        }</span>
+
+        // Initialize token
+        <span class="cov0" title="0">ctx := context.Background()
+        token, err := client.Token.Init(
+                ctx,
+                &amp;gobizfly.TokenCreateRequest{
+                        AuthMethod: "password",
+                        Username:   username,
+                        Password:   password,
+                })
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("Failed to authenticate: %v", err)
+        }</span>
+
+        // Set the token
+        <span class="cov0" title="0">client.SetKeystoneToken(token)
+
+        // Create MCP server
+        s := server.NewMCPServer(
+                "BizflyCloud MCP",
+                "1.0.0",
+        )
+
+        // Register tools
+        RegisterServerTools(s, client)
+        RegisterVolumeTools(s, client)
+        RegisterKubernetesTools(s, client)
+        RegisterDatabaseTools(s, client)
+        RegisterLoadBalancerTools(s, client)
+        RegisterDNSTools(s, client)
+        RegisterCDNTools(s, client)
+        RegisterKMSTools(s, client)
+        RegisterContainerRegistryTools(s, client)
+        RegisterAutoScalingTools(s, client)
+        RegisterAlertTools(s, client)
+
+        // Start the stdio server for Cursor/Claude Desktop integration
+        if err := server.ServeStdio(s); err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("Server error: %v\n", err)
+        }</span>
+} </pre>
+		
+		<pre class="file" id="file10" style="display: none">package main
+
+import (
+        "context"
+        "errors"
+        "fmt"
+
+        "github.com/bizflycloud/gobizfly"
+        "github.com/mark3labs/mcp-go/mcp"
+        "github.com/mark3labs/mcp-go/server"
+)
+
+// RegisterServerTools registers all server-related tools with the MCP server
+func RegisterServerTools(s *server.MCPServer, client *gobizfly.Client) <span class="cov8" title="1">{
+        // List servers tool
+        listServersTool := mcp.NewTool("bizflycloud_list_servers",
+                mcp.WithDescription("List all Bizfly Cloud servers"),
+        )
+        s.AddTool(listServersTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                servers, err := client.CloudServer.List(ctx, &amp;gobizfly.ServerListOptions{})
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to list servers: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := "Available servers:\n\n"
+                for _, server := range servers </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Server: %s\n", server.Name)
+                        result += fmt.Sprintf("  ID: %s\n", server.ID)
+                        result += fmt.Sprintf("  Status: %s\n", server.Status)
+                        result += fmt.Sprintf("  Flavor: %s\n", server.FlavorName)
+                        result += fmt.Sprintf("  Zone: %s\n", server.AvailabilityZone)
+                        if len(server.IPAddresses.WanV4Addresses) &gt; 0 </span><span class="cov0" title="0">{
+                                result += fmt.Sprintf("  WAN IP: %s\n", string(server.IPAddresses.WanV4Addresses[0].Address))
+                        }</span>
+                        <span class="cov0" title="0">if len(server.IPAddresses.LanAddresses) &gt; 0 </span><span class="cov0" title="0">{
+                                result += fmt.Sprintf("  LAN IP: %s\n", string(server.IPAddresses.LanAddresses[0].Address))
+                        }</span>
+                        <span class="cov0" title="0">result += fmt.Sprintf("  Created At: %s\n", server.CreatedAt)
+                        result += fmt.Sprintf("  Updated At: %s\n", server.UpdatedAt)
+                        result += "\n"</span>
+                }
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Reboot server tool
+        <span class="cov8" title="1">rebootServerTool := mcp.NewTool("bizflycloud_reboot_server",
+                mcp.WithDescription("Reboot a Bizfly Cloud server"),
+                mcp.WithString("server_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the server to reboot"),
+                ),
+        )
+        s.AddTool(rebootServerTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                serverID, ok := request.Params.Arguments["server_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("server_id must be a string")
+                }</span>
+                <span class="cov0" title="0">_, err := client.CloudServer.SoftReboot(ctx, serverID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to reboot server: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Server %s rebooted successfully", serverID)), nil</span>
+        })
+
+        // Delete server tool
+        <span class="cov8" title="1">deleteServerTool := mcp.NewTool("bizflycloud_delete_server",
+                mcp.WithDescription("Delete a Bizfly Cloud server"),
+                mcp.WithString("server_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the server to delete"),
+                ),
+        )
+        s.AddTool(deleteServerTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                serverID, ok := request.Params.Arguments["server_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("server_id must be a string")
+                }</span>
+                <span class="cov0" title="0">_, err := client.CloudServer.Delete(ctx, serverID, []string{})
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to delete server: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Server %s deleted successfully", serverID)), nil</span>
+        })
+
+        // Start server tool
+        <span class="cov8" title="1">startServerTool := mcp.NewTool("bizflycloud_start_server",
+                mcp.WithDescription("Start a Bizfly Cloud server"),
+                mcp.WithString("server_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the server to start"),
+                ),
+        )
+        s.AddTool(startServerTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                serverID, ok := request.Params.Arguments["server_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("server_id must be a string")
+                }</span>
+                <span class="cov0" title="0">_, err := client.CloudServer.Start(ctx, serverID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to start server: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Server %s started successfully", serverID)), nil</span>
+        })
+
+        // Resize server tool
+        <span class="cov8" title="1">resizeServerTool := mcp.NewTool("bizflycloud_resize_server",
+                mcp.WithDescription("Resize a Bizfly Cloud server"),
+                mcp.WithString("server_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the server to resize"),
+                ),
+                mcp.WithString("flavor_name",
+                        mcp.Required(),
+                        mcp.Description("Name of the new flavor to resize to"),
+                ),
+        )
+        s.AddTool(resizeServerTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                serverID, ok := request.Params.Arguments["server_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("server_id must be a string")
+                }</span>
+                <span class="cov0" title="0">flavorName, ok := request.Params.Arguments["flavor_name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("flavor_name must be a string")
+                }</span>
+
+                // Get the flavor ID from the name
+                <span class="cov0" title="0">flavors, err := client.CloudServer.Flavors().List(ctx)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to get flavors: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">var flavorID string
+                for _, flavor := range flavors </span><span class="cov0" title="0">{
+                        if flavor.Name == flavorName </span><span class="cov0" title="0">{
+                                flavorID = flavor.ID
+                                break</span>
+                        }
+                }
+                <span class="cov0" title="0">if flavorID == "" </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Flavor '%s' not found", flavorName)), nil
+                }</span>
+
+                <span class="cov0" title="0">_, err = client.CloudServer.Resize(ctx, serverID, flavorID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to resize server: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Server %s resizing to flavor %s successfully", serverID, flavorName)), nil</span>
+        })
+
+        // List flavors tool
+        <span class="cov8" title="1">listFlavorsTool := mcp.NewTool("bizflycloud_list_flavors",
+                mcp.WithDescription("List all available Bizfly Cloud server flavors"),
+        )
+        s.AddTool(listFlavorsTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                flavors, err := client.CloudServer.Flavors().List(ctx)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to list flavors: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := "Available flavors:\n\n"
+                for _, flavor := range flavors </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Flavor: %s\n", flavor.Name)
+                        result += fmt.Sprintf("  ID: %s\n", flavor.ID)
+                        result += fmt.Sprintf("  vCPUs: %d\n", flavor.VCPUs)
+                        result += fmt.Sprintf("  RAM: %d MB\n", flavor.RAM)
+                        result += fmt.Sprintf("  Disk: %d GB\n", flavor.Disk)
+                        result += fmt.Sprintf("  Category: %s\n", flavor.Category)
+                        result += "\n"
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Get server tool
+        <span class="cov8" title="1">getServerTool := mcp.NewTool("bizflycloud_get_server",
+                mcp.WithDescription("Get details of a Bizfly Cloud server"),
+                mcp.WithString("server_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the server to get details for"),
+                ),
+        )
+        s.AddTool(getServerTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                serverID, ok := request.Params.Arguments["server_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("server_id must be a string")
+                }</span>
+                <span class="cov0" title="0">server, err := client.CloudServer.Get(ctx, serverID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to get server: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("Server Details:\n\n")
+                result += fmt.Sprintf("Name: %s\n", server.Name)
+                result += fmt.Sprintf("ID: %s\n", server.ID)
+                result += fmt.Sprintf("Status: %s\n", server.Status)
+                result += fmt.Sprintf("Flavor: %s\n", server.FlavorName)
+                result += fmt.Sprintf("Zone: %s\n", server.AvailabilityZone)
+                if len(server.IPAddresses.WanV4Addresses) &gt; 0 </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("WAN IPs:\n")
+                        for _, ip := range server.IPAddresses.WanV4Addresses </span><span class="cov0" title="0">{
+                                result += fmt.Sprintf("  - %s\n", string(ip.Address))
+                        }</span>
+                }
+                <span class="cov0" title="0">if len(server.IPAddresses.LanAddresses) &gt; 0 </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("LAN IPs:\n")
+                        for _, ip := range server.IPAddresses.LanAddresses </span><span class="cov0" title="0">{
+                                result += fmt.Sprintf("  - %s\n", string(ip.Address))
+                        }</span>
+                }
+                <span class="cov0" title="0">result += fmt.Sprintf("Created At: %s\n", server.CreatedAt)
+                result += fmt.Sprintf("Updated At: %s\n", server.UpdatedAt)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Stop server tool
+        <span class="cov8" title="1">stopServerTool := mcp.NewTool("bizflycloud_stop_server",
+                mcp.WithDescription("Stop a Bizfly Cloud server"),
+                mcp.WithString("server_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the server to stop"),
+                ),
+        )
+        s.AddTool(stopServerTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                serverID, ok := request.Params.Arguments["server_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("server_id must be a string")
+                }</span>
+                <span class="cov0" title="0">_, err := client.CloudServer.Stop(ctx, serverID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to stop server: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Server %s stopped successfully", serverID)), nil</span>
+        })
+
+        // Hard reboot server tool
+        <span class="cov8" title="1">hardRebootServerTool := mcp.NewTool("bizflycloud_hard_reboot_server",
+                mcp.WithDescription("Hard reboot a Bizfly Cloud server (force reboot)"),
+                mcp.WithString("server_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the server to hard reboot"),
+                ),
+        )
+        s.AddTool(hardRebootServerTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                serverID, ok := request.Params.Arguments["server_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("server_id must be a string")
+                }</span>
+                <span class="cov0" title="0">_, err := client.CloudServer.HardReboot(ctx, serverID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to hard reboot server: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Server %s hard rebooted successfully", serverID)), nil</span>
+        })
+} </pre>
+		
+		<pre class="file" id="file11" style="display: none">package main
+
+import (
+        "testing"
+
+        "github.com/mark3labs/mcp-go/mcp"
+        "github.com/mark3labs/mcp-go/server"
+)
+
+// createTestMCPRequest creates a test MCP CallToolRequest with given arguments
+func createTestMCPRequest(toolName string, arguments map[string]interface{}) mcp.CallToolRequest <span class="cov8" title="1">{
+        return mcp.CallToolRequest{
+                Params: struct {
+                        Name      string                 `json:"name"`
+                        Arguments map[string]interface{} `json:"arguments,omitempty"`
+                        Meta      *struct {
+                                ProgressToken mcp.ProgressToken `json:"progressToken,omitempty"`
+                        } `json:"_meta,omitempty"`
+                }{
+                        Name:      toolName,
+                        Arguments: arguments,
+                },
+        }
+}</span>
+
+// createTestMCPServer creates a test MCP server instance
+func createTestMCPServer() *server.MCPServer <span class="cov8" title="1">{
+        return server.NewMCPServer(
+                "BizflyCloud MCP Test",
+                "1.0.0",
+        )
+}</span>
+
+// getTextFromResult extracts text from CallToolResult Content
+func getTextFromResult(result *mcp.CallToolResult) string <span class="cov8" title="1">{
+        if result == nil || len(result.Content) == 0 </span><span class="cov8" title="1">{
+                return ""
+        }</span>
+        
+        // Get first text content
+        <span class="cov8" title="1">for _, content := range result.Content </span><span class="cov8" title="1">{
+                if textContent, ok := mcp.AsTextContent(content); ok </span><span class="cov8" title="1">{
+                        return textContent.Text
+                }</span>
+        }
+        <span class="cov0" title="0">return ""</span>
+}
+
+// verifyToolResult verifies that a tool result contains expected text
+func verifyToolResult(t *testing.T, result *mcp.CallToolResult, expectedSubstring string) <span class="cov8" title="1">{
+        if result == nil </span><span class="cov0" title="0">{
+                t.Fatal("Expected non-nil result")
+                return
+        }</span>
+
+        <span class="cov8" title="1">if result.IsError </span><span class="cov8" title="1">{
+                text := getTextFromResult(result)
+                t.Logf("Tool returned error: %s", text)
+                return
+        }</span>
+
+        <span class="cov8" title="1">text := getTextFromResult(result)
+        if text == "" </span><span class="cov0" title="0">{
+                t.Fatal("Expected non-empty text result")
+                return
+        }</span>
+
+        <span class="cov8" title="1">if expectedSubstring != "" &amp;&amp; !contains(text, expectedSubstring) </span><span class="cov0" title="0">{
+                t.Errorf("Expected result to contain '%s', got: %s", expectedSubstring, text)
+        }</span>
+}
+
+// verifyToolError verifies that a tool result is an error
+func verifyToolError(t *testing.T, result *mcp.CallToolResult, expectedErrorSubstring string) <span class="cov8" title="1">{
+        if result == nil </span><span class="cov0" title="0">{
+                t.Fatal("Expected non-nil result")
+                return
+        }</span>
+
+        <span class="cov8" title="1">if !result.IsError </span><span class="cov0" title="0">{
+                text := getTextFromResult(result)
+                t.Errorf("Expected error result, got: %s", text)
+                return
+        }</span>
+
+        <span class="cov8" title="1">text := getTextFromResult(result)
+        if expectedErrorSubstring != "" &amp;&amp; !contains(text, expectedErrorSubstring) </span><span class="cov0" title="0">{
+                t.Errorf("Expected error to contain '%s', got: %s", expectedErrorSubstring, text)
+        }</span>
+}
+
+// contains checks if a string contains a substring
+func contains(s, substr string) bool <span class="cov8" title="1">{
+        if len(substr) == 0 </span><span class="cov8" title="1">{
+                return true
+        }</span>
+        <span class="cov8" title="1">if len(s) &lt; len(substr) </span><span class="cov8" title="1">{
+                return false
+        }</span>
+        <span class="cov8" title="1">for i := 0; i &lt;= len(s)-len(substr); i++ </span><span class="cov8" title="1">{
+                if s[i:i+len(substr)] == substr </span><span class="cov8" title="1">{
+                        return true
+                }</span>
+        }
+        <span class="cov8" title="1">return false</span>
+}
+
+</pre>
+		
+		<pre class="file" id="file12" style="display: none">package main
+
+import (
+        "context"
+        "errors"
+        "fmt"
+
+        "github.com/bizflycloud/gobizfly"
+        "github.com/mark3labs/mcp-go/mcp"
+        "github.com/mark3labs/mcp-go/server"
+)
+
+// RegisterVolumeTools registers all volume-related tools with the MCP server
+func RegisterVolumeTools(s *server.MCPServer, client *gobizfly.Client) <span class="cov8" title="1">{
+        // List volumes tool
+        listVolumesTool := mcp.NewTool("bizflycloud_list_volumes",
+                mcp.WithDescription("List all Bizfly Cloud volumes"),
+        )
+        s.AddTool(listVolumesTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                volumes, err := client.CloudServer.Volumes().List(ctx, &amp;gobizfly.VolumeListOptions{})
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to list volumes: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := "Available volumes:\n\n"
+                for _, volume := range volumes </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Volume: %s\n", volume.Name)
+                        result += fmt.Sprintf("  ID: %s\n", volume.ID)
+                        result += fmt.Sprintf("  Status: %s\n", volume.Status)
+                        result += fmt.Sprintf("  Size: %d GB\n", volume.Size)
+                        result += fmt.Sprintf("  Type: %s\n", volume.VolumeType)
+                        result += fmt.Sprintf("  Zone: %s\n", volume.AvailabilityZone)
+                        result += fmt.Sprintf("  Created At: %s\n", volume.CreatedAt)
+                        result += fmt.Sprintf("  Updated At: %s\n", volume.UpdatedAt)
+                        result += "\n"
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Create volume tool
+        <span class="cov8" title="1">createVolumeTool := mcp.NewTool("bizflycloud_create_volume",
+                mcp.WithDescription("Create a new Bizfly Cloud volume"),
+                mcp.WithString("name",
+                        mcp.Required(),
+                        mcp.Description("Name of the volume"),
+                ),
+                mcp.WithNumber("size",
+                        mcp.Required(),
+                        mcp.Description("Size of the volume in GB"),
+                ),
+                mcp.WithString("volume_type",
+                        mcp.Required(),
+                        mcp.Description("Type of the volume"),
+                ),
+        )
+        s.AddTool(createVolumeTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                name, ok := request.Params.Arguments["name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("name must be a string")
+                }</span>
+                <span class="cov0" title="0">size, ok := request.Params.Arguments["size"].(float64)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("size must be a number")
+                }</span>
+                <span class="cov0" title="0">volumeType, ok := request.Params.Arguments["volume_type"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("volume_type must be a string")
+                }</span>
+
+                <span class="cov0" title="0">volume, err := client.CloudServer.Volumes().Create(ctx, &amp;gobizfly.VolumeCreateRequest{
+                        Name:       name,
+                        Size:       int(size),
+                        VolumeType: volumeType,
+                })
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to create volume: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("Volume created successfully:\n")
+                result += fmt.Sprintf("  Name: %s\n", volume.Name)
+                result += fmt.Sprintf("  ID: %s\n", volume.ID)
+                result += fmt.Sprintf("  Size: %d GB\n", volume.Size)
+                result += fmt.Sprintf("  Type: %s\n", volume.VolumeType)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Resize volume tool
+        <span class="cov8" title="1">resizeVolumeTool := mcp.NewTool("bizflycloud_resize_volume",
+                mcp.WithDescription("Resize a Bizfly Cloud volume"),
+                mcp.WithString("volume_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the volume to resize"),
+                ),
+                mcp.WithNumber("new_size",
+                        mcp.Required(),
+                        mcp.Description("New size of the volume in GB"),
+                ),
+        )
+        s.AddTool(resizeVolumeTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                volumeID, ok := request.Params.Arguments["volume_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("volume_id must be a string")
+                }</span>
+                <span class="cov0" title="0">newSize, ok := request.Params.Arguments["new_size"].(float64)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("new_size must be a number")
+                }</span>
+
+                <span class="cov0" title="0">_, err := client.CloudServer.Volumes().ExtendVolume(ctx, volumeID, int(newSize))
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to resize volume: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Volume %s resized to %d GB successfully", volumeID, int(newSize))), nil</span>
+        })
+
+        // Delete volume tool
+        <span class="cov8" title="1">deleteVolumeTool := mcp.NewTool("bizflycloud_delete_volume",
+                mcp.WithDescription("Delete a Bizfly Cloud volume"),
+                mcp.WithString("volume_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the volume to delete"),
+                ),
+        )
+        s.AddTool(deleteVolumeTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                volumeID, ok := request.Params.Arguments["volume_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("volume_id must be a string")
+                }</span>
+                <span class="cov0" title="0">err := client.CloudServer.Volumes().Delete(ctx, volumeID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to delete volume: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Volume %s deleted successfully", volumeID)), nil</span>
+        })
+
+        // List snapshots tool
+        <span class="cov8" title="1">listSnapshotsTool := mcp.NewTool("bizflycloud_list_snapshots",
+                mcp.WithDescription("List all Bizfly Cloud volume snapshots"),
+        )
+        s.AddTool(listSnapshotsTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                opts := &amp;gobizfly.ListSnasphotsOptions{}
+                snapshots, err := client.CloudServer.Snapshots().List(ctx, opts)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to list snapshots: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := "Available snapshots:\n\n"
+                for _, snapshot := range snapshots </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Snapshot: %s\n", snapshot.Name)
+                        result += fmt.Sprintf("  ID: %s\n", snapshot.ID)
+                        result += fmt.Sprintf("  Status: %s\n", snapshot.Status)
+                        result += fmt.Sprintf("  Volume ID: %s\n", snapshot.VolumeID)
+                        result += fmt.Sprintf("  Size: %d GB\n", snapshot.Size)
+                        result += "\n"
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Create snapshot tool
+        <span class="cov8" title="1">createSnapshotTool := mcp.NewTool("bizflycloud_create_snapshot",
+                mcp.WithDescription("Create a snapshot of a Bizfly Cloud volume"),
+                mcp.WithString("volume_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the volume to snapshot"),
+                ),
+                mcp.WithString("name",
+                        mcp.Required(),
+                        mcp.Description("Name of the snapshot"),
+                ),
+        )
+        s.AddTool(createSnapshotTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                volumeID, ok := request.Params.Arguments["volume_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("volume_id must be a string")
+                }</span>
+                <span class="cov0" title="0">name, ok := request.Params.Arguments["name"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("name must be a string")
+                }</span>
+
+                <span class="cov0" title="0">snapshot, err := client.CloudServer.Snapshots().Create(ctx, &amp;gobizfly.SnapshotCreateRequest{
+                        VolumeID: volumeID,
+                        Name:     name,
+                })
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to create snapshot: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("Snapshot created successfully:\n")
+                result += fmt.Sprintf("  Name: %s\n", snapshot.Name)
+                result += fmt.Sprintf("  ID: %s\n", snapshot.ID)
+                result += fmt.Sprintf("  Status: %s\n", snapshot.Status)
+                result += fmt.Sprintf("  Volume ID: %s\n", snapshot.VolumeID)
+                result += fmt.Sprintf("  Size: %d GB\n", snapshot.Size)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Delete snapshot tool
+        <span class="cov8" title="1">deleteSnapshotTool := mcp.NewTool("bizflycloud_delete_snapshot",
+                mcp.WithDescription("Delete a Bizfly Cloud volume snapshot"),
+                mcp.WithString("snapshot_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the snapshot to delete"),
+                ),
+        )
+        s.AddTool(deleteSnapshotTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                snapshotID, ok := request.Params.Arguments["snapshot_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("snapshot_id must be a string")
+                }</span>
+                <span class="cov0" title="0">err := client.CloudServer.Snapshots().Delete(ctx, snapshotID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to delete snapshot: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Snapshot %s deleted successfully", snapshotID)), nil</span>
+        })
+
+        // Get volume tool
+        <span class="cov8" title="1">getVolumeTool := mcp.NewTool("bizflycloud_get_volume",
+                mcp.WithDescription("Get details of a Bizfly Cloud volume"),
+                mcp.WithString("volume_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the volume to get details for"),
+                ),
+        )
+        s.AddTool(getVolumeTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                volumeID, ok := request.Params.Arguments["volume_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("volume_id must be a string")
+                }</span>
+                <span class="cov0" title="0">volume, err := client.CloudServer.Volumes().Get(ctx, volumeID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to get volume: %v", err)), nil
+                }</span>
+
+                <span class="cov0" title="0">result := fmt.Sprintf("Volume Details:\n\n")
+                result += fmt.Sprintf("Name: %s\n", volume.Name)
+                result += fmt.Sprintf("ID: %s\n", volume.ID)
+                result += fmt.Sprintf("Status: %s\n", volume.Status)
+                result += fmt.Sprintf("Size: %d GB\n", volume.Size)
+                result += fmt.Sprintf("Type: %s\n", volume.VolumeType)
+                result += fmt.Sprintf("Zone: %s\n", volume.AvailabilityZone)
+                result += fmt.Sprintf("Category: %s\n", volume.Category)
+                if len(volume.Attachments) &gt; 0 </span><span class="cov0" title="0">{
+                        result += fmt.Sprintf("Attachments:\n")
+                        for _, attachment := range volume.Attachments </span><span class="cov0" title="0">{
+                                result += fmt.Sprintf("  - Server ID: %s, Device: %s\n", attachment.ServerID, attachment.Device)
+                        }</span>
+                }
+                <span class="cov0" title="0">result += fmt.Sprintf("Created At: %s\n", volume.CreatedAt)
+                result += fmt.Sprintf("Updated At: %s\n", volume.UpdatedAt)
+                return mcp.NewToolResultText(result), nil</span>
+        })
+
+        // Attach volume tool
+        <span class="cov8" title="1">attachVolumeTool := mcp.NewTool("bizflycloud_attach_volume",
+                mcp.WithDescription("Attach a Bizfly Cloud volume to a server"),
+                mcp.WithString("volume_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the volume to attach"),
+                ),
+                mcp.WithString("server_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the server to attach the volume to"),
+                ),
+        )
+        s.AddTool(attachVolumeTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                volumeID, ok := request.Params.Arguments["volume_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("volume_id must be a string")
+                }</span>
+                <span class="cov0" title="0">serverID, ok := request.Params.Arguments["server_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("server_id must be a string")
+                }</span>
+                <span class="cov0" title="0">_, err := client.CloudServer.Volumes().Attach(ctx, volumeID, serverID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to attach volume: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Volume %s attached to server %s successfully", volumeID, serverID)), nil</span>
+        })
+
+        // Detach volume tool
+        <span class="cov8" title="1">detachVolumeTool := mcp.NewTool("bizflycloud_detach_volume",
+                mcp.WithDescription("Detach a Bizfly Cloud volume from a server"),
+                mcp.WithString("volume_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the volume to detach"),
+                ),
+                mcp.WithString("server_id",
+                        mcp.Required(),
+                        mcp.Description("ID of the server to detach the volume from"),
+                ),
+        )
+        s.AddTool(detachVolumeTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) </span><span class="cov0" title="0">{
+                volumeID, ok := request.Params.Arguments["volume_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("volume_id must be a string")
+                }</span>
+                <span class="cov0" title="0">serverID, ok := request.Params.Arguments["server_id"].(string)
+                if !ok </span><span class="cov0" title="0">{
+                        return nil, errors.New("server_id must be a string")
+                }</span>
+                <span class="cov0" title="0">_, err := client.CloudServer.Volumes().Detach(ctx, volumeID, serverID)
+                if err != nil </span><span class="cov0" title="0">{
+                        return mcp.NewToolResultError(fmt.Sprintf("Failed to detach volume: %v", err)), nil
+                }</span>
+                <span class="cov0" title="0">return mcp.NewToolResultText(fmt.Sprintf("Volume %s detached from server %s successfully", volumeID, serverID)), nil</span>
+        })
+} </pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

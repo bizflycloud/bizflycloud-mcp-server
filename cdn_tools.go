@@ -20,16 +20,29 @@ func RegisterCDNTools(s *server.MCPServer, client *gobizfly.Client) {
 	s.AddTool(listDomainsTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		domains, err := client.CDN.List(ctx, &gobizfly.ListOptions{})
 		if err != nil {
+			// Check if error is 404 or service not available
+			errStr := strings.ToLower(err.Error())
+			if strings.Contains(errStr, "404") || 
+			   strings.Contains(errStr, "not found") || 
+			   strings.Contains(errStr, "resource not found") ||
+			   strings.Contains(errStr, "<svg") ||
+			   strings.Contains(errStr, "<html") {
+				return mcp.NewToolResultText("Available CDN domains:\n\n(No CDN domains found or CDN service is not enabled)"), nil
+			}
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to list CDN domains: %v", err)), nil
 		}
 
 		result := "Available CDN domains:\n\n"
-		for _, domain := range domains.Domains {
-			result += fmt.Sprintf("Domain: %s\n", domain.Domain)
-			result += fmt.Sprintf("  ID: %s\n", domain.DomainID)
-			result += fmt.Sprintf("  Slug: %s\n", domain.Slug)
-			result += fmt.Sprintf("  CDN Domain: %s\n", domain.DomainCDN)
-			result += "\n"
+		if domains == nil || len(domains.Domains) == 0 {
+			result += "(No CDN domains found)\n"
+		} else {
+			for _, domain := range domains.Domains {
+				result += fmt.Sprintf("Domain: %s\n", domain.Domain)
+				result += fmt.Sprintf("  ID: %s\n", domain.DomainID)
+				result += fmt.Sprintf("  Slug: %s\n", domain.Slug)
+				result += fmt.Sprintf("  CDN Domain: %s\n", domain.DomainCDN)
+				result += "\n"
+			}
 		}
 		return mcp.NewToolResultText(result), nil
 	})

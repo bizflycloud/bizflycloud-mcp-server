@@ -1,0 +1,27 @@
+{
+    "mcpServers": {
+        "bizflycloud": {
+            "command": "docker",
+            "args": [
+                "run",
+                "-i",
+                "--rm",
+                "-e",
+                "BIZFLY_USERNAME",
+                "-e",
+                "BIZFLY_PASSWORD",
+                "-e",
+                "BIZFLY_REGION",
+                "-e",
+                "BIZFLY_API_URL",
+                "bizfly-mcp-server:latest"
+            ],
+            "env": {
+                "BIZFLY_USERNAME": "your_username",
+                "BIZFLY_PASSWORD": "your_password",
+                "BIZFLY_REGION": "HaNoi",
+                "BIZFLY_API_URL": "https://manage.bizflycloud.vn"
+            }
+        }
+    }
+}

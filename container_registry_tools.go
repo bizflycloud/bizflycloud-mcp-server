@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/bizflycloud/gobizfly"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -19,17 +20,30 @@ func RegisterContainerRegistryTools(s *server.MCPServer, client *gobizfly.Client
 	s.AddTool(listRepositoriesTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		repositories, err := client.ContainerRegistry.List(ctx, &gobizfly.ListOptions{})
 		if err != nil {
+			// Check if error is 404 or service not available
+			errStr := strings.ToLower(err.Error())
+			if strings.Contains(errStr, "404") || 
+			   strings.Contains(errStr, "not found") || 
+			   strings.Contains(errStr, "resource not found") ||
+			   strings.Contains(errStr, "<svg") ||
+			   strings.Contains(errStr, "<html") {
+				return mcp.NewToolResultText("Available repositories:\n\n(No repositories found or Container Registry service is not enabled)"), nil
+			}
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to list repositories: %v", err)), nil
 		}
 
 		result := "Available repositories:\n\n"
-		for _, repo := range repositories {
-			result += fmt.Sprintf("Repository: %s\n", repo.Name)
-			result += fmt.Sprintf("  Public: %v\n", repo.Public)
-			result += fmt.Sprintf("  Pulls: %d\n", repo.Pulls)
-			result += fmt.Sprintf("  Last Push: %s\n", repo.LastPush)
-			result += fmt.Sprintf("  Created At: %s\n", repo.CreatedAt)
-			result += "\n"
+		if len(repositories) == 0 {
+			result += "(No repositories found)\n"
+		} else {
+			for _, repo := range repositories {
+				result += fmt.Sprintf("Repository: %s\n", repo.Name)
+				result += fmt.Sprintf("  Public: %v\n", repo.Public)
+				result += fmt.Sprintf("  Pulls: %d\n", repo.Pulls)
+				result += fmt.Sprintf("  Last Push: %s\n", repo.LastPush)
+				result += fmt.Sprintf("  Created At: %s\n", repo.CreatedAt)
+				result += "\n"
+			}
 		}
 		return mcp.NewToolResultText(result), nil
 	})

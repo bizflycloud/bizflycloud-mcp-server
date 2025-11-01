@@ -1,0 +1,92 @@
+{
+    "cursor": {
+        "description": "Configuration for Cursor IDE",
+        "config_file_path": "~/.cursor/mcp.json",
+        "example_config": {
+            "mcpServers": {
+                "bizflycloud": {
+                    "command": "docker",
+                    "args": [
+                        "run",
+                        "-i",
+                        "--rm",
+                        "-e",
+                        "BIZFLY_USERNAME",
+                        "-e",
+                        "BIZFLY_PASSWORD",
+                        "-e",
+                        "BIZFLY_REGION",
+                        "-e",
+                        "BIZFLY_API_URL",
+                        "bizfly-mcp-server:latest"
+                    ],
+                    "env": {
+                        "BIZFLY_USERNAME": "your_username",
+                        "BIZFLY_PASSWORD": "your_password",
+                        "BIZFLY_REGION": "HaNoi",
+                        "BIZFLY_API_URL": "https://manage.bizflycloud.vn"
+                    }
+                }
+            }
+        },
+        "local_binary_config": {
+            "mcpServers": {
+                "bizflycloud": {
+                    "command": "/absolute/path/to/bizflycloud-mcp-server/bizfly-mcp-server",
+                    "env": {
+                        "BIZFLY_USERNAME": "your_username",
+                        "BIZFLY_PASSWORD": "your_password",
+                        "BIZFLY_REGION": "HaNoi",
+                        "BIZFLY_API_URL": "https://manage.bizflycloud.vn"
+                    }
+                }
+            }
+        }
+    },
+    "claude_desktop": {
+        "description": "Configuration for Claude Desktop",
+        "config_file_path_mac": "~/Library/Application Support/Claude/claude_desktop_config.json",
+        "config_file_path_windows": "%APPDATA%\\Claude\\claude_desktop_config.json",
+        "config_file_path_linux": "~/.config/Claude/claude_desktop_config.json",
+        "example_config": {
+            "mcpServers": {
+                "bizflycloud": {
+                    "command": "docker",
+                    "args": [
+                        "run",
+                        "-i",
+                        "--rm",
+                        "-e",
+                        "BIZFLY_USERNAME",
+                        "-e",
+                        "BIZFLY_PASSWORD",
+                        "-e",
+                        "BIZFLY_REGION",
+                        "-e",
+                        "BIZFLY_API_URL",
+                        "bizfly-mcp-server:latest"
+                    ],
+                    "env": {
+                        "BIZFLY_USERNAME": "your_username",
+                        "BIZFLY_PASSWORD": "your_password",
+                        "BIZFLY_REGION": "HaNoi",
+                        "BIZFLY_API_URL": "https://manage.bizflycloud.vn"
+                    }
+                }
+            }
+        },
+        "local_binary_config": {
+            "mcpServers": {
+                "bizflycloud": {
+                    "command": "/absolute/path/to/bizflycloud-mcp-server/bizfly-mcp-server",
+                    "env": {
+                        "BIZFLY_USERNAME": "your_username",
+                        "BIZFLY_PASSWORD": "your_password",
+                        "BIZFLY_REGION": "HaNoi",
+                        "BIZFLY_API_URL": "https://manage.bizflycloud.vn"
+                    }
+                }
+            }
+        }
+    }
+}

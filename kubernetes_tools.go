@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"strings"
 
 	"github.com/bizflycloud/gobizfly"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -17,35 +20,86 @@ func RegisterKubernetesTools(s *server.MCPServer, client *gobizfly.Client) {
 		mcp.WithDescription("List all Bizfly Cloud Kubernetes clusters"),
 	)
 	s.AddTool(listClustersTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		clusters, err := client.KubernetesEngine.List(ctx, nil)
+		log.Printf("[DEBUG] Kubernetes List tool called")
+		log.Printf("[DEBUG] Context: %v", ctx)
+		log.Printf("[DEBUG] Calling KubernetesEngine.List with options: %+v", &gobizfly.ListOptions{})
+		
+		// Check if client has token
+		if client == nil {
+			return mcp.NewToolResultError("Client is nil"), nil
+		}
+		
+		clusters, err := client.KubernetesEngine.List(ctx, &gobizfly.ListOptions{})
 		if err != nil {
+			log.Printf("[ERROR] Failed to list clusters: %v", err)
+			// Check if it's a 404 error (API endpoint not found)
+			errStr := err.Error()
+			if strings.Contains(errStr, "404") || strings.Contains(errStr, "<svg") || strings.Contains(errStr, "Resource not found") {
+				return mcp.NewToolResultError(fmt.Sprintf("Failed to list clusters: Kubernetes Engine service may not be enabled or the API endpoint is not available.\n\nError: %v\n\nPlease check:\n- Kubernetes Engine service is enabled on your account\n- Your credentials have permission to access Kubernetes Engine\n- The API endpoint is correct", err)), nil
+			}
 			return mcp.NewToolResultError(fmt.Sprintf("Failed to list clusters: %v", err)), nil
 		}
 
+		// Debug: Log raw response
+		clustersJSON, _ := json.MarshalIndent(clusters, "", "  ")
+		log.Printf("[DEBUG] API returned %d clusters", len(clusters))
+		log.Printf("[DEBUG] Raw clusters response: %s", string(clustersJSON))
+
+		if len(clusters) == 0 {
+			log.Printf("[DEBUG] No clusters found in response")
+			return mcp.NewToolResultText("Available Kubernetes clusters:\n\n(No clusters found)\n\nNote: If you have clusters but they're not listed, please check:\n- Your credentials are correct\n- The clusters are in the correct project/region\n- Your account has permission to list Kubernetes clusters"), nil
+		}
+
+		log.Printf("[DEBUG] Processing %d clusters", len(clusters))
+
 		result := "Available Kubernetes clusters:\n\n"
-		for _, c := range clusters {
-			// Get full cluster details
-			cluster, err := client.KubernetesEngine.Get(ctx, c.UID)
-			if err != nil {
-				return mcp.NewToolResultError(fmt.Sprintf("Failed to get cluster details: %v", err)), nil
+		for i, c := range clusters {
+			log.Printf("[DEBUG] Processing cluster %d: Name=%s, UID=%s, Status=%s", i+1, c.Name, c.UID, c.ClusterStatus)
+			// Display basic info from List response first
+			result += fmt.Sprintf("Cluster: %s\n", c.Name)
+			result += fmt.Sprintf("  ID: %s\n", c.UID)
+			result += fmt.Sprintf("  Status: %s\n", c.ClusterStatus)
+			result += fmt.Sprintf("  Provision Status: %s\n", c.ProvisionStatus)
+			if c.Version.K8SVersion != "" {
+				result += fmt.Sprintf("  Version: %s\n", c.Version.K8SVersion)
+				log.Printf("[DEBUG] Cluster %s version: %s", c.UID, c.Version.K8SVersion)
+			} else if c.Version.Name != "" {
+				result += fmt.Sprintf("  Version: %s\n", c.Version.Name)
+				log.Printf("[DEBUG] Cluster %s version: %s", c.UID, c.Version.Name)
+			} else {
+				log.Printf("[DEBUG] Cluster %s version is empty", c.UID)
+			}
+			result += fmt.Sprintf("  Node Pools Count: %d\n", c.WorkerPoolsCount)
+			result += fmt.Sprintf("  Created At: %s\n", c.CreatedAt)
+			if c.VPCNetworkID != "" {
+				result += fmt.Sprintf("  VPC Network ID: %s\n", c.VPCNetworkID)
 			}
 
-			result += fmt.Sprintf("Cluster: %s\n", cluster.Name)
-			result += fmt.Sprintf("  ID: %s\n", cluster.UID)
-			result += fmt.Sprintf("  Status: %s\n", cluster.ClusterStatus)
-			result += fmt.Sprintf("  Version: %s\n", cluster.Version)
-			result += fmt.Sprintf("  Node Pools Count: %d\n", cluster.WorkerPoolsCount)
-			result += fmt.Sprintf("  Created At: %s\n", cluster.CreatedAt)
-			result += "\nWorker Pools:\n"
-			for _, pool := range cluster.WorkerPools {
-				result += fmt.Sprintf("  - Name: %s\n", pool.Name)
-				result += fmt.Sprintf("    ID: %s\n", pool.UID)
-				result += fmt.Sprintf("    Flavor: %s\n", pool.Flavor)
-				result += fmt.Sprintf("    Profile Type: %s\n", pool.ProfileType)
-				result += fmt.Sprintf("    Volume Type: %s\n", pool.VolumeType)
-				result += fmt.Sprintf("    Volume Size: %d GB\n", pool.VolumeSize)
-				result += fmt.Sprintf("    Desired Size: %d nodes\n", pool.DesiredSize)
+			// Try to get full cluster details for worker pools info
+			// If Get fails, we still have the basic info from List
+			log.Printf("[DEBUG] Fetching full details for cluster %s (UID: %s)", c.Name, c.UID)
+			cluster, err := client.KubernetesEngine.Get(ctx, c.UID)
+			if err != nil {
+				// Log the error but continue with other clusters
+				log.Printf("[WARN] Failed to get full details for cluster %s: %v", c.UID, err)
+				result += fmt.Sprintf("  Warning: Could not fetch full details: %v\n", err)
 				result += "\n"
+				continue
+			}
+			log.Printf("[DEBUG] Successfully fetched full details for cluster %s, worker pools: %d", c.UID, len(cluster.WorkerPools))
+
+			if len(cluster.WorkerPools) > 0 {
+				result += "\nWorker Pools:\n"
+				for _, pool := range cluster.WorkerPools {
+					result += fmt.Sprintf("  - Name: %s\n", pool.Name)
+					result += fmt.Sprintf("    ID: %s\n", pool.UID)
+					result += fmt.Sprintf("    Flavor: %s\n", pool.Flavor)
+					result += fmt.Sprintf("    Profile Type: %s\n", pool.ProfileType)
+					result += fmt.Sprintf("    Volume Type: %s\n", pool.VolumeType)
+					result += fmt.Sprintf("    Volume Size: %d GB\n", pool.VolumeSize)
+					result += fmt.Sprintf("    Desired Size: %d nodes\n", pool.DesiredSize)
+					result += "\n"
+				}
 			}
 			result += "\n"
 		}
