@@ -76,6 +76,7 @@ func main() {
 	RegisterContainerRegistryTools(s, client)
 	RegisterAutoScalingTools(s, client)
 	RegisterAlertTools(s, client)
+	RegisterResourceSummaryTools(s, client)
 
 	// Start the stdio server for Cursor/Claude Desktop integration
 	if err := server.ServeStdio(s); err != nil {
